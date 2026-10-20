@@ -1,0 +1,14 @@
+# Experiment C — Scheduling and Batching
+# Research question: Where does batching stop helping?
+# Compare static batching (PyTorch) vs continuous/in-flight batching (vLLM, TRT-LLM).
+
+experiment: C_batching
+dtype: bf16
+input_tokens: 512
+output_tokens: 256
+requests: 50
+warmup: 3
+
+sweep:
+  engine: [pytorch, vllm, tensorrt_llm]
+  batch_size: [1, 2, 4, 8, 16, 32, 64]

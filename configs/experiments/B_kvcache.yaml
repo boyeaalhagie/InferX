@@ -1,0 +1,17 @@
+# Experiment B — KV-Cache Engineering
+# Research question: How does KV-cache memory scale with sequence length and concurrency?
+#
+# Vary sequence length × concurrency. Stop at OOM boundary — document it.
+
+experiment: B_kvcache
+engine: vllm          # vLLM exposes KV-cache stats directly
+dtype: bf16
+output_tokens: 128    # keep output short; we care about KV memory during prefill
+requests: 30
+warmup: 2
+
+sweep:
+  input_tokens: [512, 1024, 2048, 4096, 8192]
+  batch_size: [1, 2, 4, 8, 16, 32]
+  # Run until OOM. Don't need all combinations.
+  # Start from (512, 1) and increase until memory saturates.

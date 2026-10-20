@@ -1,0 +1,20 @@
+# Experiment A — Baseline Benchmarking
+# Establish PyTorch baseline numbers across batch sizes and input lengths.
+# These results get committed to results/baselines/ as the regression reference.
+#
+# Submit each run with:
+#   ./scripts/submit_job.sh --engine pytorch -- $(cat configs/experiments/A_baseline.yaml | ...)
+# Or use scripts/run_experiment.sh A
+
+experiment: A_baseline
+engine: pytorch
+dtype: bf16
+output_tokens: 256
+requests: 50
+warmup: 3
+
+# Grid to sweep (run_experiment.sh will iterate these)
+sweep:
+  input_tokens: [128, 512, 2048]
+  batch_size: [1, 4, 8]
+  # 3 × 3 = 9 runs

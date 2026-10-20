@@ -1,0 +1,24 @@
+# Experiment D — Prefill vs Decode Characterization
+# Research question: How does the GPU bottleneck shift between prefill and decode?
+# Three workload archetypes: short / medium / long prompt.
+
+experiment: D_prefill_decode
+dtype: bf16
+batch_size: 4
+requests: 50
+warmup: 3
+
+workloads:
+  short_prompt:
+    input_tokens: 128
+    output_tokens: 512    # long generation relative to prompt
+  medium_prompt:
+    input_tokens: 1024
+    output_tokens: 256
+  long_prompt:
+    input_tokens: 4096
+    output_tokens: 128    # short generation — almost all time in prefill
+
+sweep:
+  engine: [pytorch, vllm, tensorrt_llm]
+  # Run each workload through each engine

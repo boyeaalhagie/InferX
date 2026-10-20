@@ -1,0 +1,468 @@
+#!/usr/bin/env python3
+"""
+InferX — bench_inference
+Inference performance benchmarking harness.
+
+Usage:
+    python3 bench_inference \
+        --model /data/inferx/models/llama-3.1-8b \
+        --engine pytorch \
+        --input-tokens 2048 \
+        --output-tokens 256 \
+        --batch-size 8 \
+        --requests 50
+
+    python3 bench_inference --dry-run --engine vllm --model /data/inferx/models/qwen2.5-7b
+"""
+
+import argparse
+import json
+import os
+import sys
+import time
+import uuid
+import socket
+import subprocess
+import threading
+from dataclasses import dataclass, asdict
+from pathlib import Path
+from typing import Optional
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+RESULTS_DIR = REPO_ROOT / "results"
+
+
+# ---------------------------------------------------------------------------
+# Result schema
+# ---------------------------------------------------------------------------
+
+@dataclass
+class BenchResult:
+    run_id: str
+    model: str
+    engine: str
+    gpu: str
+    cuda_version: str
+    node: str
+    dtype: str
+    batch_size: int
+    input_tokens: int
+    output_tokens: int
+    requests: int
+    # Latency (ms)
+    ttft_ms: float          # time to first token
+    itl_ms: float           # mean inter-token latency
+    latency_ms: float       # end-to-end per request
+    # Throughput
+    output_tokens_per_sec: float
+    total_tokens_per_sec: float
+    requests_per_sec: float
+    # Memory
+    gpu_memory_peak_gb: float
+    gpu_utilization_pct: float
+    # Metadata
+    slurm_job_id: Optional[str]
+    timestamp: str
+    warmup_requests: int
+
+
+# ---------------------------------------------------------------------------
+# GPU metrics poller (background thread)
+# ---------------------------------------------------------------------------
+
+class GPUPoller:
+    """Polls nvidia-smi at ~100ms intervals while a benchmark runs."""
+
+    def __init__(self, interval_ms: int = 100):
+        self.interval = interval_ms / 1000.0
+        self._samples_memory: list[float] = []
+        self._samples_util: list[float] = []
+        self._running = False
+        self._thread: Optional[threading.Thread] = None
+
+    def start(self):
+        self._running = True
+        self._thread = threading.Thread(target=self._poll, daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        self._running = False
+        if self._thread:
+            self._thread.join(timeout=2.0)
+
+    def _poll(self):
+        while self._running:
+            try:
+                out = subprocess.check_output(
+                    ["nvidia-smi",
+                     "--query-gpu=memory.used,utilization.gpu",
+                     "--format=csv,noheader,nounits"],
+                    stderr=subprocess.DEVNULL,
+                    text=True,
+                )
+                for line in out.strip().splitlines():
+                    parts = line.split(",")
+                    if len(parts) == 2:
+                        mem_mb = float(parts[0].strip())
+                        util = float(parts[1].strip())
+                        self._samples_memory.append(mem_mb / 1024.0)  # -> GB
+                        self._samples_util.append(util)
+            except Exception:
+                pass
+            time.sleep(self.interval)
+
+    @property
+    def peak_memory_gb(self) -> float:
+        return max(self._samples_memory) if self._samples_memory else 0.0
+
+    @property
+    def mean_utilization_pct(self) -> float:
+        if not self._samples_util:
+            return 0.0
+        return sum(self._samples_util) / len(self._samples_util)
+
+
+# ---------------------------------------------------------------------------
+# Workload generator
+# ---------------------------------------------------------------------------
+
+def build_prompts(n: int, input_tokens: int, tokenizer=None) -> list[str]:
+    """
+    Build n synthetic prompts of approximately input_tokens tokens each.
+    If a tokenizer is provided, calibrate length precisely.
+    Otherwise fall back to a character-count heuristic (~3.5 chars/token).
+    """
+    # Base text that tokenizes predictably
+    base = (
+        "The quick brown fox jumps over the lazy dog. "
+        "Performance engineering requires careful measurement. "
+        "Transformer inference has two phases: prefill and decode. "
+    )
+
+    if tokenizer is None:
+        # Heuristic: ~3.5 chars per token
+        target_chars = int(input_tokens * 3.5)
+        repeated = (base * (target_chars // len(base) + 1))[:target_chars]
+        return [repeated] * n
+
+    # Tokenizer-calibrated: repeat until we hit the target
+    tokens_per_base = len(tokenizer.encode(base))
+    repeats = max(1, input_tokens // tokens_per_base + 1)
+    candidate = base * repeats
+    encoded = tokenizer.encode(candidate)[:input_tokens]
+    prompt = tokenizer.decode(encoded, skip_special_tokens=True)
+    return [prompt] * n
+
+
+# ---------------------------------------------------------------------------
+# System info helpers
+# ---------------------------------------------------------------------------
+
+def get_gpu_name() -> str:
+    try:
+        out = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+            stderr=subprocess.DEVNULL, text=True,
+        )
+        return out.strip().splitlines()[0].strip()
+    except Exception:
+        return "unknown"
+
+
+def get_cuda_version() -> str:
+    try:
+        out = subprocess.check_output(
+            ["nvcc", "--version"], stderr=subprocess.DEVNULL, text=True,
+        )
+        for line in out.splitlines():
+            if "release" in line:
+                return line.strip()
+        return out.strip().splitlines()[-1]
+    except Exception:
+        return "unknown"
+
+
+# ---------------------------------------------------------------------------
+# Engine loader
+# ---------------------------------------------------------------------------
+
+def load_engine(engine_name: str, model_path: str, dtype: str, args):
+    """Import and instantiate the requested engine."""
+    sys.path.insert(0, str(REPO_ROOT))
+
+    if engine_name == "pytorch":
+        from engines.pytorch.engine import PyTorchEngine
+        return PyTorchEngine(model_path=model_path, dtype=dtype)
+
+    elif engine_name == "vllm":
+        from engines.vllm.engine import VLLMEngine
+        return VLLMEngine(model_path=model_path, dtype=dtype,
+                          tensor_parallel_size=args.tensor_parallel)
+
+    elif engine_name == "tensorrt_llm":
+        from engines.tensorrt_llm.engine import TRTLLMEngine
+        engine_dir = args.trtllm_engine_dir or str(
+            REPO_ROOT / "results" / "trt_engines" / Path(model_path).name
+        )
+        return TRTLLMEngine(engine_dir=engine_dir, dtype=dtype)
+
+    else:
+        raise ValueError(f"Unknown engine: {engine_name}")
+
+
+# ---------------------------------------------------------------------------
+# Argument parsing
+# ---------------------------------------------------------------------------
+
+def parse_args():
+    p = argparse.ArgumentParser(
+        description="InferX inference benchmark harness",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+
+    # Core
+    p.add_argument("--model",         required=True,
+                   help="Path to model directory (HuggingFace format)")
+    p.add_argument("--engine",        required=True,
+                   choices=["pytorch", "vllm", "tensorrt_llm"],
+                   help="Inference engine to benchmark")
+    p.add_argument("--input-tokens",  type=int, default=512,
+                   help="Approximate number of input tokens per request")
+    p.add_argument("--output-tokens", type=int, default=256,
+                   help="Number of output tokens to generate per request")
+    p.add_argument("--batch-size",    type=int, default=1,
+                   help="Number of requests per batch")
+    p.add_argument("--requests",      type=int, default=50,
+                   help="Total number of requests to run (excluding warmup)")
+
+    # Precision
+    p.add_argument("--dtype",
+                   choices=["fp32", "fp16", "bf16", "int8"],
+                   default="bf16",
+                   help="Model dtype / precision")
+
+    # Engine-specific
+    p.add_argument("--tensor-parallel", type=int, default=1,
+                   help="Tensor parallelism degree (vLLM / TRT-LLM)")
+    p.add_argument("--trtllm-engine-dir",
+                   help="Path to compiled TRT-LLM engine directory")
+
+    # Run control
+    p.add_argument("--warmup",        type=int, default=3,
+                   help="Number of warmup requests (discarded from metrics)")
+    p.add_argument("--output-file",
+                   help="JSONL file to append results to "
+                        "(default: results/<engine>_<timestamp>.jsonl)")
+    p.add_argument("--slurm-job-id",
+                   help="SLURM job ID (set automatically by submit_job.sh)")
+
+    # Modes
+    p.add_argument("--dry-run", action="store_true",
+                   help="Validate config and print what would run, without "
+                        "loading the model or running inference")
+    p.add_argument("--verbose", action="store_true",
+                   help="Print per-request timings")
+
+    return p.parse_args()
+
+
+# ---------------------------------------------------------------------------
+# Dry-run output
+# ---------------------------------------------------------------------------
+
+def dry_run(args):
+    print("=" * 60)
+    print("InferX — DRY RUN (no model loaded)")
+    print("=" * 60)
+    print(f"  Model:         {args.model}")
+    print(f"  Engine:        {args.engine}")
+    print(f"  dtype:         {args.dtype}")
+    print(f"  Input tokens:  {args.input_tokens}")
+    print(f"  Output tokens: {args.output_tokens}")
+    print(f"  Batch size:    {args.batch_size}")
+    print(f"  Requests:      {args.requests}  (+{args.warmup} warmup)")
+    print(f"  Tensor par.:   {args.tensor_parallel}")
+    print()
+
+    # Estimate KV-cache memory (rough, for planning)
+    # KV cache per token ≈ 2 * layers * heads * head_dim * 2 (K+V) * dtype_bytes
+    # For a 7B-class model: ~128 layers*heads factor, 128 head_dim, BF16=2B
+    # Very rough: ~0.5 MB per token per sequence for 7B
+    kv_per_tok_mb = 0.5
+    kv_total_gb = (args.input_tokens + args.output_tokens) * args.batch_size * kv_per_tok_mb / 1024
+    print(f"  Est. KV-cache: ~{kv_total_gb:.1f} GB  (rough estimate for 7B model)")
+    print()
+
+    total_output_tokens = args.requests * args.output_tokens
+    total_tokens = args.requests * (args.input_tokens + args.output_tokens)
+    print(f"  Total output tokens to generate: {total_output_tokens:,}")
+    print(f"  Total tokens (in+out):           {total_tokens:,}")
+    print()
+
+    model_path = Path(args.model)
+    if not model_path.exists():
+        print(f"  WARNING: Model path does not exist: {args.model}")
+        print(f"           Run: ./scripts/download_model.sh <model>")
+    else:
+        print(f"  Model path exists: OK")
+
+    if args.engine == "tensorrt_llm":
+        engine_dir = args.trtllm_engine_dir or str(
+            REPO_ROOT / "results" / "trt_engines" / model_path.name
+        )
+        if not Path(engine_dir).exists():
+            print(f"  WARNING: TRT-LLM engine dir not found: {engine_dir}")
+            print(f"           Run: ./engines/tensorrt_llm/build_engine.sh")
+        else:
+            print(f"  TRT-LLM engine dir exists: OK")
+
+    print()
+    print("Run without --dry-run to execute.")
+
+
+# ---------------------------------------------------------------------------
+# Main benchmark loop
+# ---------------------------------------------------------------------------
+
+def run_benchmark(args):
+    import importlib
+
+    print(f"Loading engine: {args.engine}")
+    engine = load_engine(args.engine, args.model, args.dtype, args)
+    engine.load()
+    print(f"Engine loaded.")
+
+    # Build prompts (tokenizer-calibrated if engine exposes one)
+    tokenizer = getattr(engine, "tokenizer", None)
+    prompts = build_prompts(
+        n=args.batch_size,
+        input_tokens=args.input_tokens,
+        tokenizer=tokenizer,
+    )
+
+    gpu_poller = GPUPoller(interval_ms=100)
+
+    # --- Warmup ---
+    print(f"Warming up ({args.warmup} batches)...")
+    for _ in range(args.warmup):
+        engine.generate(prompts, max_new_tokens=args.output_tokens)
+
+    # --- Timed runs ---
+    n_batches = max(1, args.requests // args.batch_size)
+    ttfts, itls, latencies = [], [], []
+
+    print(f"Running {n_batches} batches × batch_size={args.batch_size}...")
+    gpu_poller.start()
+    wall_start = time.perf_counter()
+
+    for i in range(n_batches):
+        result = engine.generate(prompts, max_new_tokens=args.output_tokens)
+        ttfts.append(result.ttft_ms)
+        itls.extend(result.itl_ms_list)
+        latencies.append(result.total_latency_ms)
+        if args.verbose:
+            print(f"  batch {i+1}/{n_batches}: "
+                  f"TTFT={result.ttft_ms:.1f}ms  "
+                  f"ITL={sum(result.itl_ms_list)/max(1,len(result.itl_ms_list)):.1f}ms  "
+                  f"latency={result.total_latency_ms:.1f}ms")
+
+    wall_elapsed = time.perf_counter() - wall_start
+    gpu_poller.stop()
+    engine.teardown()
+
+    # --- Aggregate ---
+    total_requests = n_batches * args.batch_size
+    total_output_toks = total_requests * args.output_tokens
+    total_toks = total_requests * (args.input_tokens + args.output_tokens)
+
+    result = BenchResult(
+        run_id=str(uuid.uuid4())[:8],
+        model=args.model,
+        engine=args.engine,
+        gpu=get_gpu_name(),
+        cuda_version=get_cuda_version(),
+        node=socket.gethostname(),
+        dtype=args.dtype,
+        batch_size=args.batch_size,
+        input_tokens=args.input_tokens,
+        output_tokens=args.output_tokens,
+        requests=total_requests,
+        ttft_ms=sum(ttfts) / len(ttfts),
+        itl_ms=sum(itls) / max(1, len(itls)),
+        latency_ms=sum(latencies) / len(latencies),
+        output_tokens_per_sec=total_output_toks / wall_elapsed,
+        total_tokens_per_sec=total_toks / wall_elapsed,
+        requests_per_sec=total_requests / wall_elapsed,
+        gpu_memory_peak_gb=gpu_poller.peak_memory_gb,
+        gpu_utilization_pct=gpu_poller.mean_utilization_pct,
+        slurm_job_id=args.slurm_job_id,
+        timestamp=time.strftime("%Y-%m-%dT%H:%M:%S"),
+        warmup_requests=args.warmup,
+    )
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
+
+def write_result(result: BenchResult, output_file: Optional[str]):
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    if output_file is None:
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        output_file = str(RESULTS_DIR / f"{result.engine}_{ts}.jsonl")
+
+    line = json.dumps(asdict(result))
+    with open(output_file, "a") as f:
+        f.write(line + "\n")
+
+    return output_file
+
+
+def print_summary(result: BenchResult):
+    print()
+    print("=" * 60)
+    print("RESULTS")
+    print("=" * 60)
+    print(f"  Engine:          {result.engine}")
+    print(f"  Model:           {Path(result.model).name}")
+    print(f"  GPU:             {result.gpu}")
+    print(f"  dtype:           {result.dtype}")
+    print(f"  Batch size:      {result.batch_size}")
+    print(f"  Input tokens:    {result.input_tokens}")
+    print(f"  Output tokens:   {result.output_tokens}")
+    print(f"  Requests:        {result.requests}")
+    print()
+    print(f"  TTFT:            {result.ttft_ms:.1f} ms")
+    print(f"  ITL:             {result.itl_ms:.2f} ms")
+    print(f"  E2E latency:     {result.latency_ms:.1f} ms")
+    print(f"  Output tok/s:    {result.output_tokens_per_sec:.1f}")
+    print(f"  Total tok/s:     {result.total_tokens_per_sec:.1f}")
+    print(f"  Requests/s:      {result.requests_per_sec:.2f}")
+    print(f"  GPU memory peak: {result.gpu_memory_peak_gb:.2f} GB")
+    print(f"  GPU utilization: {result.gpu_utilization_pct:.1f}%")
+    print("=" * 60)
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+def main():
+    args = parse_args()
+
+    if args.dry_run:
+        dry_run(args)
+        return
+
+    result = run_benchmark(args)
+    print_summary(result)
+
+    output_file = write_result(result, args.output_file)
+    print(f"\nResult written to: {output_file}")
+
+
+if __name__ == "__main__":
+    main()

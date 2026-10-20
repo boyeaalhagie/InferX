@@ -1,0 +1,15 @@
+# InferX default configuration
+# Override any field via CLI flags or experiment-specific configs.
+
+model: /data/inferx/models/llama-3.1-8b   # set after Phase 0 model selection
+engine: pytorch
+dtype: bf16
+
+input_tokens: 512
+output_tokens: 256
+batch_size: 1
+requests: 50
+warmup: 3
+tensor_parallel: 1
+
+results_dir: results/

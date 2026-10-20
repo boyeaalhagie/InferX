@@ -1,0 +1,32 @@
+# Result data — too large for git (use results/baselines/ for committed baselines)
+results/*.jsonl
+results/slurm_*.out
+results/trt_engines/
+results/profiles/
+
+# Profiling output
+profiling/nsight-systems/*.nsys-rep
+profiling/nsight-compute/*.ncu-rep
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Singularity containers (large binary files)
+*.sif
+
+# SLURM job output files
+*.out
+inferx_*.out
+
+# Model weights (live on /data/inferx/models/, not in repo)
+models/*
+!models/.gitkeep
+
+# Editor / OS
+.DS_Store
+*.swp
+.idea/

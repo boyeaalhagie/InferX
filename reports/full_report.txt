@@ -1,0 +1,1579 @@
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       128 tokens
+Output:      256 tokens
+Concurrency: 1
+Timestamp:   2026-11-09T18:15:48
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             12.6 ms  (+0.0% vs baseline)
+ITL:              12.07 ms  (+0.0% vs baseline)
+E2E Latency:      3091.4 ms  (+0.0% vs baseline)
+Output Tok/s:     82.8  (+0.0% vs baseline)
+Total Tok/s:      124.2  (+0.0% vs baseline)
+Requests/s:       0.32  (+0.0% vs baseline)
+GPU Memory Peak:  14.99 GB  (+0.0% vs baseline)
+GPU Utilization:  77.5%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       128 tokens
+Output:      256 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:15:21
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             17.4 ms  (-1.2% vs baseline)
+ITL:              11.20 ms  (-9.3% vs baseline)
+E2E Latency:      2873.4 ms  (-54.6% vs baseline)
+Output Tok/s:     356.2  (+10.1% vs baseline)
+Total Tok/s:      534.3  (+32.1% vs baseline)
+Requests/s:       1.39  (+120.2% vs baseline)
+GPU Memory Peak:  67.35 GB  (+343.2% vs baseline)
+GPU Utilization:  17.1%  (-77.9% vs baseline)
+
+--------------------------------------------------
+REGRESSIONS DETECTED
+--------------------------------------------------
+  !! REGRESSION: gpu_memory_peak_gb increased +343.2%
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       128 tokens
+Output:      256 tokens
+Concurrency: 8
+Timestamp:   2026-11-09T18:15:04
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             29.2 ms  (+0.0% vs baseline)
+ITL:              11.27 ms  (+0.0% vs baseline)
+E2E Latency:      2903.5 ms  (+0.0% vs baseline)
+Output Tok/s:     704.8  (+0.0% vs baseline)
+Total Tok/s:      1057.2  (+0.0% vs baseline)
+Requests/s:       2.75  (+0.0% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  17.7%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       2048 tokens
+Output:      256 tokens
+Concurrency: 1
+Timestamp:   2026-11-09T18:19:25
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             56.7 ms  (+0.0% vs baseline)
+ITL:              12.25 ms  (+0.0% vs baseline)
+E2E Latency:      3181.0 ms  (+0.0% vs baseline)
+Output Tok/s:     80.4  (+0.0% vs baseline)
+Total Tok/s:      723.4  (+0.0% vs baseline)
+Requests/s:       0.31  (+0.0% vs baseline)
+GPU Memory Peak:  15.92 GB  (+0.0% vs baseline)
+GPU Utilization:  77.7%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       2048 tokens
+Output:      256 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:17:41
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             215.9 ms  (+0.0% vs baseline)
+ITL:              11.30 ms  (+0.0% vs baseline)
+E2E Latency:      3096.8 ms  (+0.0% vs baseline)
+Output Tok/s:     329.7  (+0.0% vs baseline)
+Total Tok/s:      2967.1  (+0.0% vs baseline)
+Requests/s:       1.29  (+0.0% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  18.5%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       2048 tokens
+Output:      256 tokens
+Concurrency: 8
+Timestamp:   2026-11-09T18:17:55
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             430.1 ms  (+0.0% vs baseline)
+ITL:              11.88 ms  (+0.0% vs baseline)
+E2E Latency:      3459.9 ms  (+0.0% vs baseline)
+Output Tok/s:     589.6  (+0.0% vs baseline)
+Total Tok/s:      5306.0  (+0.0% vs baseline)
+Requests/s:       2.30  (+0.0% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  19.0%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 1
+Timestamp:   2026-11-09T18:17:11
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             17.8 ms  (+0.3% vs baseline)
+ITL:              11.22 ms  (-8.8% vs baseline)
+E2E Latency:      2878.3 ms  (-8.7% vs baseline)
+Output Tok/s:     88.9  (+9.6% vs baseline)
+Total Tok/s:      266.7  (+9.6% vs baseline)
+Requests/s:       0.35  (+9.6% vs baseline)
+GPU Memory Peak:  67.35 GB  (+343.2% vs baseline)
+GPU Utilization:  17.1%  (-77.3% vs baseline)
+
+--------------------------------------------------
+REGRESSIONS DETECTED
+--------------------------------------------------
+  !! REGRESSION: gpu_memory_peak_gb increased +343.2%
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:16:42
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             55.9 ms  (+0.1% vs baseline)
+ITL:              10.99 ms  (-0.1% vs baseline)
+E2E Latency:      2858.8 ms  (-0.1% vs baseline)
+Output Tok/s:     357.8  (+0.1% vs baseline)
+Total Tok/s:      1073.4  (+0.1% vs baseline)
+Requests/s:       1.40  (+0.1% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  17.8%  (+0.5% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 8
+Timestamp:   2026-11-09T18:16:26
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             108.7 ms  (-1.3% vs baseline)
+ITL:              11.28 ms  (+2.0% vs baseline)
+E2E Latency:      2984.0 ms  (+1.9% vs baseline)
+Output Tok/s:     685.2  (-1.8% vs baseline)
+Total Tok/s:      2055.6  (-1.8% vs baseline)
+Requests/s:       2.68  (-1.8% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  18.5%  (+1.2% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       1024 tokens
+Output:      128 tokens
+Concurrency: 1
+Timestamp:   2026-11-09T18:30:56
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             787.5 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      787.5 ms  (+0.0% vs baseline)
+Output Tok/s:     162.5  (+0.0% vs baseline)
+Total Tok/s:      1462.8  (+0.0% vs baseline)
+Requests/s:       1.27  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.8%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       1024 tokens
+Output:      128 tokens
+Concurrency: 16
+Timestamp:   2026-11-09T18:32:02
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             866.3 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      866.3 ms  (+0.0% vs baseline)
+Output Tok/s:     2363.5  (+0.0% vs baseline)
+Total Tok/s:      21271.5  (+0.0% vs baseline)
+Requests/s:       18.46  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  20.0%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       1024 tokens
+Output:      128 tokens
+Concurrency: 2
+Timestamp:   2026-11-09T18:30:44
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             797.5 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      797.5 ms  (+0.0% vs baseline)
+Output Tok/s:     321.0  (+0.0% vs baseline)
+Total Tok/s:      2888.7  (+0.0% vs baseline)
+Requests/s:       2.51  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  20.0%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       1024 tokens
+Output:      128 tokens
+Concurrency: 32
+Timestamp:   2026-11-09T18:32:02
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             891.8 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      891.8 ms  (+0.0% vs baseline)
+Output Tok/s:     4591.3  (+0.0% vs baseline)
+Total Tok/s:      41321.4  (+0.0% vs baseline)
+Requests/s:       35.87  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  20.0%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       1024 tokens
+Output:      128 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:31:52
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             785.9 ms  (-50.3% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      785.9 ms  (-50.3% vs baseline)
+Output Tok/s:     651.4  (+0.6% vs baseline)
+Total Tok/s:      5862.8  (+81.0% vs baseline)
+Requests/s:       5.09  (+101.1% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  99.2%  (+398.4% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       1024 tokens
+Output:      128 tokens
+Concurrency: 8
+Timestamp:   2026-11-09T18:31:32
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             832.8 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      832.8 ms  (+0.0% vs baseline)
+Output Tok/s:     1229.4  (+0.0% vs baseline)
+Total Tok/s:      11065.0  (+0.0% vs baseline)
+Requests/s:       9.61  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.8%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       2048 tokens
+Output:      128 tokens
+Concurrency: 1
+Timestamp:   2026-11-09T18:33:10
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             767.8 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      767.8 ms  (+0.0% vs baseline)
+Output Tok/s:     166.7  (+0.0% vs baseline)
+Total Tok/s:      2833.9  (+0.0% vs baseline)
+Requests/s:       1.30  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  98.7%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       2048 tokens
+Output:      128 tokens
+Concurrency: 16
+Timestamp:   2026-11-09T18:33:32
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             904.1 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      904.1 ms  (+0.0% vs baseline)
+Output Tok/s:     2264.7  (+0.0% vs baseline)
+Total Tok/s:      38500.2  (+0.0% vs baseline)
+Requests/s:       17.69  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.8%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       2048 tokens
+Output:      128 tokens
+Concurrency: 2
+Timestamp:   2026-11-09T18:32:42
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             801.0 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      801.0 ms  (+0.0% vs baseline)
+Output Tok/s:     319.6  (+0.0% vs baseline)
+Total Tok/s:      5432.8  (+0.0% vs baseline)
+Requests/s:       2.50  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  20.0%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       2048 tokens
+Output:      128 tokens
+Concurrency: 32
+Timestamp:   2026-11-09T18:34:19
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             1010.3 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      1010.3 ms  (+0.0% vs baseline)
+Output Tok/s:     4051.5  (+0.0% vs baseline)
+Total Tok/s:      68875.3  (+0.0% vs baseline)
+Requests/s:       31.65  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  94.6%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       2048 tokens
+Output:      128 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:33:07
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             824.2 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      824.2 ms  (+0.0% vs baseline)
+Output Tok/s:     621.1  (+0.0% vs baseline)
+Total Tok/s:      10559.1  (+0.0% vs baseline)
+Requests/s:       4.85  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.8%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       2048 tokens
+Output:      128 tokens
+Concurrency: 8
+Timestamp:   2026-11-09T18:33:05
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             855.6 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      855.6 ms  (+0.0% vs baseline)
+Output Tok/s:     1196.6  (+0.0% vs baseline)
+Total Tok/s:      20342.4  (+0.0% vs baseline)
+Requests/s:       9.35  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.8%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       4096 tokens
+Output:      128 tokens
+Concurrency: 1
+Timestamp:   2026-11-09T18:34:26
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             795.7 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      795.7 ms  (+0.0% vs baseline)
+Output Tok/s:     160.8  (+0.0% vs baseline)
+Total Tok/s:      5307.9  (+0.0% vs baseline)
+Requests/s:       1.26  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.7%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       4096 tokens
+Output:      128 tokens
+Concurrency: 16
+Timestamp:   2026-11-09T18:35:33
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             967.7 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      967.7 ms  (+0.0% vs baseline)
+Output Tok/s:     2115.5  (+0.0% vs baseline)
+Total Tok/s:      69812.8  (+0.0% vs baseline)
+Requests/s:       16.53  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  20.0%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       4096 tokens
+Output:      128 tokens
+Concurrency: 2
+Timestamp:   2026-11-09T18:34:14
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             813.5 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      813.5 ms  (+0.0% vs baseline)
+Output Tok/s:     314.6  (+0.0% vs baseline)
+Total Tok/s:      10383.3  (+0.0% vs baseline)
+Requests/s:       2.46  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.6%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       4096 tokens
+Output:      128 tokens
+Concurrency: 32
+Timestamp:   2026-11-09T18:35:34
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             1116.5 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      1116.5 ms  (+0.0% vs baseline)
+Output Tok/s:     3666.0  (+0.0% vs baseline)
+Total Tok/s:      120978.9  (+0.0% vs baseline)
+Requests/s:       28.64  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.2%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       4096 tokens
+Output:      128 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:34:38
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             846.3 ms  (-0.7% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      846.3 ms  (-0.7% vs baseline)
+Output Tok/s:     604.9  (+0.7% vs baseline)
+Total Tok/s:      19962.1  (+0.7% vs baseline)
+Requests/s:       4.73  (+0.7% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.9%  (+0.6% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       4096 tokens
+Output:      128 tokens
+Concurrency: 8
+Timestamp:   2026-11-09T18:35:20
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             872.6 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      872.6 ms  (+0.0% vs baseline)
+Output Tok/s:     1173.2  (+0.0% vs baseline)
+Total Tok/s:      38715.3  (+0.0% vs baseline)
+Requests/s:       9.17  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  98.6%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       512 tokens
+Output:      128 tokens
+Concurrency: 1
+Timestamp:   2026-11-09T18:29:50
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             761.3 ms  (-50.3% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      761.3 ms  (-50.3% vs baseline)
+Output Tok/s:     168.1  (+0.5% vs baseline)
+Total Tok/s:      840.6  (+67.5% vs baseline)
+Requests/s:       1.31  (+101.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  99.1%  (+397.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       512 tokens
+Output:      128 tokens
+Concurrency: 16
+Timestamp:   2026-11-09T18:30:47
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             813.8 ms  (-50.8% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      813.8 ms  (-50.8% vs baseline)
+Output Tok/s:     2515.9  (+1.6% vs baseline)
+Total Tok/s:      12579.5  (+69.3% vs baseline)
+Requests/s:       19.66  (+103.2% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  99.8%  (+400.5% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       512 tokens
+Output:      128 tokens
+Concurrency: 2
+Timestamp:   2026-11-09T18:29:35
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             795.3 ms  (-48.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      795.3 ms  (-48.0% vs baseline)
+Output Tok/s:     321.9  (-3.9% vs baseline)
+Total Tok/s:      1609.3  (+60.1% vs baseline)
+Requests/s:       2.51  (+92.1% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.9%  (-80.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       512 tokens
+Output:      128 tokens
+Concurrency: 32
+Timestamp:   2026-11-09T18:30:33
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             861.7 ms  (-48.7% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      861.7 ms  (-48.7% vs baseline)
+Output Tok/s:     4752.4  (-2.6% vs baseline)
+Total Tok/s:      23761.9  (+62.3% vs baseline)
+Requests/s:       37.13  (+94.8% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  20.0%  (+0.9% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       512 tokens
+Output:      128 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:29:29
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             800.4 ms  (-48.2% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      800.4 ms  (-48.2% vs baseline)
+Output Tok/s:     639.7  (-3.5% vs baseline)
+Total Tok/s:      3198.3  (+60.9% vs baseline)
+Requests/s:       5.00  (+93.1% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.8%  (-80.2% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       512 tokens
+Output:      128 tokens
+Concurrency: 8
+Timestamp:   2026-11-09T18:29:26
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             821.6 ms  (-49.3% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      821.6 ms  (-49.3% vs baseline)
+Output Tok/s:     1246.2  (-1.5% vs baseline)
+Total Tok/s:      6230.9  (+64.2% vs baseline)
+Requests/s:       9.74  (+97.1% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.7%  (-1.2% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 1
+Timestamp:   2026-11-09T18:46:36
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             17.7 ms  (+0.0% vs baseline)
+ITL:              12.30 ms  (+0.0% vs baseline)
+E2E Latency:      3153.4 ms  (+0.0% vs baseline)
+Output Tok/s:     81.1  (+0.0% vs baseline)
+Total Tok/s:      243.4  (+0.0% vs baseline)
+Requests/s:       0.32  (+0.0% vs baseline)
+GPU Memory Peak:  15.19 GB  (+0.0% vs baseline)
+GPU Utilization:  75.4%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 16
+Timestamp:   2026-11-09T18:44:56
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             218.5 ms  (+0.0% vs baseline)
+ITL:              12.00 ms  (+0.0% vs baseline)
+E2E Latency:      3278.9 ms  (+0.0% vs baseline)
+Output Tok/s:     1246.0  (+0.0% vs baseline)
+Total Tok/s:      3738.1  (+0.0% vs baseline)
+Requests/s:       4.87  (+0.0% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  18.4%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 2
+Timestamp:   2026-11-09T18:45:05
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             29.7 ms  (+0.0% vs baseline)
+ITL:              11.11 ms  (+0.0% vs baseline)
+E2E Latency:      2862.5 ms  (+0.0% vs baseline)
+Output Tok/s:     178.7  (+0.0% vs baseline)
+Total Tok/s:      536.2  (+0.0% vs baseline)
+Requests/s:       0.70  (+0.0% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  17.5%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 32
+Timestamp:   2026-11-09T18:45:22
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             427.6 ms  (+0.0% vs baseline)
+ITL:              12.84 ms  (+0.0% vs baseline)
+E2E Latency:      3703.0 ms  (+0.0% vs baseline)
+Output Tok/s:     2203.8  (+0.0% vs baseline)
+Total Tok/s:      6611.4  (+0.0% vs baseline)
+Requests/s:       8.61  (+0.0% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  18.1%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:44:28
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             55.9 ms  (+0.0% vs baseline)
+ITL:              11.10 ms  (+0.9% vs baseline)
+E2E Latency:      2887.4 ms  (+0.9% vs baseline)
+Output Tok/s:     354.2  (-0.9% vs baseline)
+Total Tok/s:      1062.7  (-0.9% vs baseline)
+Requests/s:       1.38  (-0.9% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  17.8%  (+0.7% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 64
+Timestamp:   2026-11-09T18:45:55
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             876.2 ms  (+0.0% vs baseline)
+ITL:              15.20 ms  (+0.0% vs baseline)
+E2E Latency:      4753.8 ms  (+0.0% vs baseline)
+Output Tok/s:     3425.9  (+0.0% vs baseline)
+Total Tok/s:      10277.7  (+0.0% vs baseline)
+Requests/s:       13.38  (+0.0% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  18.6%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 8
+Timestamp:   2026-11-09T18:44:12
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             110.1 ms  (+0.0% vs baseline)
+ITL:              11.05 ms  (+0.0% vs baseline)
+E2E Latency:      2929.2 ms  (+0.0% vs baseline)
+Output Tok/s:     698.0  (+0.0% vs baseline)
+Total Tok/s:      2094.1  (+0.0% vs baseline)
+Requests/s:       2.73  (+0.0% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  18.3%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 1
+Timestamp:   2026-11-09T18:39:53
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             1530.3 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      1530.3 ms  (+0.0% vs baseline)
+Output Tok/s:     167.3  (+0.0% vs baseline)
+Total Tok/s:      501.9  (+0.0% vs baseline)
+Requests/s:       0.65  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.9%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 16
+Timestamp:   2026-11-09T18:40:42
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             1653.6 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      1653.6 ms  (+0.0% vs baseline)
+Output Tok/s:     2476.8  (+0.0% vs baseline)
+Total Tok/s:      7430.3  (+0.0% vs baseline)
+Requests/s:       9.67  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.9%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 2
+Timestamp:   2026-11-09T18:40:01
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             1528.0 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      1528.0 ms  (+0.0% vs baseline)
+Output Tok/s:     335.1  (+0.0% vs baseline)
+Total Tok/s:      1005.2  (+0.0% vs baseline)
+Requests/s:       1.31  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  99.6%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 32
+Timestamp:   2026-11-09T18:40:39
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             1678.8 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      1678.8 ms  (+0.0% vs baseline)
+Output Tok/s:     4878.8  (+0.0% vs baseline)
+Total Tok/s:      14636.5  (+0.0% vs baseline)
+Requests/s:       19.06  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.8%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:39:27
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             1597.5 ms  (+3.4% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      1597.5 ms  (+3.4% vs baseline)
+Output Tok/s:     641.0  (-3.3% vs baseline)
+Total Tok/s:      1922.9  (-3.3% vs baseline)
+Requests/s:       2.50  (-3.3% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  20.0%  (-79.9% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 64
+Timestamp:   2026-11-09T18:41:27
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             2000.7 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      2000.7 ms  (+0.0% vs baseline)
+Output Tok/s:     8185.9  (+0.0% vs baseline)
+Total Tok/s:      24557.8  (+0.0% vs baseline)
+Requests/s:       31.98  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  93.8%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 8
+Timestamp:   2026-11-09T18:39:17
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             1619.4 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      1619.4 ms  (+0.0% vs baseline)
+Output Tok/s:     1264.6  (+0.0% vs baseline)
+Total Tok/s:      3793.8  (+0.0% vs baseline)
+Requests/s:       4.94  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.9%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       4096 tokens
+Output:      128 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:49:14
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             446.2 ms  (+0.0% vs baseline)
+ITL:              11.94 ms  (+0.0% vs baseline)
+E2E Latency:      1963.2 ms  (+0.0% vs baseline)
+Output Tok/s:     258.7  (+0.0% vs baseline)
+Total Tok/s:      8536.6  (+0.0% vs baseline)
+Requests/s:       2.02  (+0.0% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  18.9%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       1024 tokens
+Output:      256 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:49:28
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             107.8 ms  (+0.0% vs baseline)
+ITL:              10.99 ms  (+0.0% vs baseline)
+E2E Latency:      2910.0 ms  (+0.0% vs baseline)
+Output Tok/s:     351.3  (+0.0% vs baseline)
+Total Tok/s:      1756.3  (+0.0% vs baseline)
+Requests/s:       1.37  (+0.0% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  18.4%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       128 tokens
+Output:      512 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:50:27
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             17.6 ms  (+0.0% vs baseline)
+ITL:              12.35 ms  (+0.0% vs baseline)
+E2E Latency:      6329.5 ms  (+0.0% vs baseline)
+Output Tok/s:     323.5  (+0.0% vs baseline)
+Total Tok/s:      404.3  (+0.0% vs baseline)
+Requests/s:       0.63  (+0.0% vs baseline)
+GPU Memory Peak:  15.19 GB  (+0.0% vs baseline)
+GPU Utilization:  77.5%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       4096 tokens
+Output:      128 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:50:49
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             852.0 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      852.0 ms  (+0.0% vs baseline)
+Output Tok/s:     600.9  (+0.0% vs baseline)
+Total Tok/s:      19828.4  (+0.0% vs baseline)
+Requests/s:       4.69  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.7%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       1024 tokens
+Output:      256 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:50:29
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             1580.5 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      1580.5 ms  (+0.0% vs baseline)
+Output Tok/s:     647.8  (+0.0% vs baseline)
+Total Tok/s:      3239.2  (+0.0% vs baseline)
+Requests/s:       2.53  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.9%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       128 tokens
+Output:      512 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:49:54
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             3167.8 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      3167.8 ms  (+0.0% vs baseline)
+Output Tok/s:     646.5  (+0.0% vs baseline)
+Total Tok/s:      808.1  (+0.0% vs baseline)
+Requests/s:       1.26  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  20.0%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:53:28
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             55.9 ms  (+0.0% vs baseline)
+ITL:              11.01 ms  (+0.0% vs baseline)
+E2E Latency:      2862.5 ms  (+0.0% vs baseline)
+Output Tok/s:     357.3  (+0.0% vs baseline)
+Total Tok/s:      1072.0  (+0.0% vs baseline)
+Requests/s:       1.40  (+0.0% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  17.7%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   fp16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:53:42
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             56.8 ms  (+0.0% vs baseline)
+ITL:              12.42 ms  (+0.0% vs baseline)
+E2E Latency:      3223.4 ms  (+0.0% vs baseline)
+Output Tok/s:     317.3  (+0.0% vs baseline)
+Total Tok/s:      952.0  (+0.0% vs baseline)
+Requests/s:       1.24  (+0.0% vs baseline)
+GPU Memory Peak:  15.98 GB  (+0.0% vs baseline)
+GPU Utilization:  79.2%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      pytorch
+Precision:   int8
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:53:28
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             55.7 ms  (+0.0% vs baseline)
+ITL:              11.20 ms  (+0.0% vs baseline)
+E2E Latency:      2912.9 ms  (+0.0% vs baseline)
+Output Tok/s:     351.1  (+0.0% vs baseline)
+Total Tok/s:      1053.4  (+0.0% vs baseline)
+Requests/s:       1.37  (+0.0% vs baseline)
+GPU Memory Peak:  67.35 GB  (+0.0% vs baseline)
+GPU Utilization:  17.5%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   bf16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:55:17
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             1545.3 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      1545.3 ms  (+0.0% vs baseline)
+Output Tok/s:     662.6  (+0.0% vs baseline)
+Total Tok/s:      1987.8  (+0.0% vs baseline)
+Requests/s:       2.59  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  99.7%  (+0.0% vs baseline)
+
+==================================================
+==================================================
+LLM INFERENCE PERFORMANCE REPORT
+==================================================
+
+Model:       qwen2.5-7b
+GPU:         NVIDIA H100 80GB HBM3
+Engine:      vllm
+Precision:   fp16
+Input:       512 tokens
+Output:      256 tokens
+Concurrency: 4
+Timestamp:   2026-11-09T18:53:40
+
+--------------------------------------------------
+PERFORMANCE
+--------------------------------------------------
+TTFT:             1584.9 ms  (+0.0% vs baseline)
+ITL:              0.00 ms  (+0.0% vs baseline)
+E2E Latency:      1584.9 ms  (+0.0% vs baseline)
+Output Tok/s:     646.1  (+0.0% vs baseline)
+Total Tok/s:      1938.2  (+0.0% vs baseline)
+Requests/s:       2.52  (+0.0% vs baseline)
+GPU Memory Peak:  72.72 GB  (+0.0% vs baseline)
+GPU Utilization:  19.9%  (+0.0% vs baseline)
+
+==================================================
+
+Engine           dtype  BS   in    out   TTFT ms    ITL ms    tok/s      mem GB   util% 
+--------------------------------------------------------------------------------
+pytorch          bf16   1    128   256   12.6       12.07     82.8       14.99    77.5  
+pytorch          bf16   4    128   256   17.4       11.20     356.2      67.35    17.1  
+pytorch          bf16   8    128   256   29.2       11.27     704.8      67.35    17.7  
+pytorch          bf16   1    2048  256   56.7       12.25     80.4       15.92    77.7  
+pytorch          bf16   4    2048  256   215.9      11.30     329.7      67.35    18.5  
+pytorch          bf16   8    2048  256   430.1      11.88     589.6      67.35    19.0  
+pytorch          bf16   1    512   256   17.8       11.22     88.9       67.35    17.1  
+pytorch          bf16   4    512   256   55.9       10.99     357.8      67.35    17.8  
+pytorch          bf16   8    512   256   108.7      11.28     685.2      67.35    18.5  
+vllm             bf16   1    1024  128   787.5      0.00      162.5      72.72    19.8  
+vllm             bf16   16   1024  128   866.3      0.00      2363.5     72.72    20.0  
+vllm             bf16   2    1024  128   797.5      0.00      321.0      72.72    20.0  
+vllm             bf16   32   1024  128   891.8      0.00      4591.3     72.72    20.0  
+vllm             bf16   4    1024  128   785.9      0.00      651.4      72.72    99.2  
+vllm             bf16   8    1024  128   832.8      0.00      1229.4     72.72    19.8  
+vllm             bf16   1    2048  128   767.8      0.00      166.7      72.72    98.7  
+vllm             bf16   16   2048  128   904.1      0.00      2264.7     72.72    19.8  
+vllm             bf16   2    2048  128   801.0      0.00      319.6      72.72    20.0  
+vllm             bf16   32   2048  128   1010.3     0.00      4051.5     72.72    94.6  
+vllm             bf16   4    2048  128   824.2      0.00      621.1      72.72    19.8  
+vllm             bf16   8    2048  128   855.6      0.00      1196.6     72.72    19.8  
+vllm             bf16   1    4096  128   795.7      0.00      160.8      72.72    19.7  
+vllm             bf16   16   4096  128   967.7      0.00      2115.5     72.72    20.0  
+vllm             bf16   2    4096  128   813.5      0.00      314.6      72.72    19.6  
+vllm             bf16   32   4096  128   1116.5     0.00      3666.0     72.72    19.2  
+vllm             bf16   4    4096  128   846.3      0.00      604.9      72.72    19.9  
+vllm             bf16   8    4096  128   872.6      0.00      1173.2     72.72    98.6  
+vllm             bf16   1    512   128   761.3      0.00      168.1      72.72    99.1  
+vllm             bf16   16   512   128   813.8      0.00      2515.9     72.72    99.8  
+vllm             bf16   2    512   128   795.3      0.00      321.9      72.72    19.9  
+vllm             bf16   32   512   128   861.7      0.00      4752.4     72.72    20.0  
+vllm             bf16   4    512   128   800.4      0.00      639.7      72.72    19.8  
+vllm             bf16   8    512   128   821.6      0.00      1246.2     72.72    19.7  
+pytorch          bf16   1    512   256   17.7       12.30     81.1       15.19    75.4  
+pytorch          bf16   16   512   256   218.5      12.00     1246.0     67.35    18.4  
+pytorch          bf16   2    512   256   29.7       11.11     178.7      67.35    17.5  
+pytorch          bf16   32   512   256   427.6      12.84     2203.8     67.35    18.1  
+pytorch          bf16   4    512   256   55.9       11.10     354.2      67.35    17.8  
+pytorch          bf16   64   512   256   876.2      15.20     3425.9     67.35    18.6  
+pytorch          bf16   8    512   256   110.1      11.05     698.0      67.35    18.3  
+vllm             bf16   1    512   256   1530.3     0.00      167.3      72.72    19.9  
+vllm             bf16   16   512   256   1653.6     0.00      2476.8     72.72    19.9  
+vllm             bf16   2    512   256   1528.0     0.00      335.1      72.72    99.6  
+vllm             bf16   32   512   256   1678.8     0.00      4878.8     72.72    19.8  
+vllm             bf16   4    512   256   1597.5     0.00      641.0      72.72    20.0  
+vllm             bf16   64   512   256   2000.7     0.00      8185.9     72.72    93.8  
+vllm             bf16   8    512   256   1619.4     0.00      1264.6     72.72    19.9  
+pytorch          bf16   4    4096  128   446.2      11.94     258.7      67.35    18.9  
+pytorch          bf16   4    1024  256   107.8      10.99     351.3      67.35    18.4  
+pytorch          bf16   4    128   512   17.6       12.35     323.5      15.19    77.5  
+vllm             bf16   4    4096  128   852.0      0.00      600.9      72.72    19.7  
+vllm             bf16   4    1024  256   1580.5     0.00      647.8      72.72    19.9  
+vllm             bf16   4    128   512   3167.8     0.00      646.5      72.72    20.0  
+pytorch          bf16   4    512   256   55.9       11.01     357.3      67.35    17.7  
+pytorch          fp16   4    512   256   56.8       12.42     317.3      15.98    79.2  
+pytorch          int8   4    512   256   55.7       11.20     351.1      67.35    17.5  
+vllm             bf16   4    512   256   1545.3     0.00      662.6      72.72    99.7  
+vllm             fp16   4    512   256   1584.9     0.00      646.1      72.72    19.9  

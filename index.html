@@ -291,6 +291,7 @@
     <li><a href="#engines"  >Engines</a></li>
     <li><a href="#findings" >Findings</a></li>
     <li><a href="#faq"      >FAQ</a></li>
+    <li><a href="#tryit"    >Try It</a></li>
   </ul>
 </nav>
 
@@ -301,6 +302,25 @@
   <div class="hero-eyebrow">Inference Performance Engineering</div>
   <h1>Infer<span>X</span></h1>
   <div class="hero-subtitle">LLM Inference Performance on NVIDIA H100 — Rosie HPC (MSOE)</div>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+    <div style="background:rgba(118,185,0,0.08);border:1px solid rgba(118,185,0,0.25);border-radius:6px;padding:10px 16px;display:flex;flex-direction:column;gap:3px;">
+      <span style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);">Model</span>
+      <span style="font-size:14px;font-weight:600;color:var(--text);font-family:var(--font-mono);">Qwen2.5-7B</span>
+      <span style="font-size:11px;color:var(--muted);">7.62B params · BF16 / FP16 / INT8</span>
+    </div>
+    <div style="background:rgba(88,166,255,0.08);border:1px solid rgba(88,166,255,0.25);border-radius:6px;padding:10px 16px;display:flex;flex-direction:column;gap:3px;">
+      <span style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--blue);">GPU</span>
+      <span style="font-size:14px;font-weight:600;color:var(--text);font-family:var(--font-mono);">NVIDIA H100 SXM5</span>
+      <span style="font-size:11px;color:var(--muted);">80 GB HBM3 · 3.35 TB/s · 3,958 TFLOPS BF16</span>
+    </div>
+    <div style="background:rgba(210,168,255,0.08);border:1px solid rgba(210,168,255,0.25);border-radius:6px;padding:10px 16px;display:flex;flex-direction:column;gap:3px;">
+      <span style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--purple);">Cluster</span>
+      <span style="font-size:14px;font-weight:600;color:var(--text);font-family:var(--font-mono);">MSOE Rosie HPC</span>
+      <span style="font-size:11px;color:var(--muted);">SLURM · Singularity · CUDA 12.9</span>
+    </div>
+  </div>
+
   <p class="hero-desc">
     A measurement-first platform for benchmarking, profiling, and understanding LLM inference performance.
     Three engines, five experiments, 62 benchmark runs — built to answer: why is this runtime performing
@@ -908,6 +928,109 @@
       </div>
     </details>
 
+  </div>
+</section>
+
+
+<!-- TRY IT -->
+<section id="tryit">
+  <div class="section-label">Run It Yourself</div>
+  <h2>Try It</h2>
+  <p>
+    All experiments run on MSOE Rosie via SLURM. The repo is self-contained —
+    clone it, point it at model weights, and submit. Everything below assumes
+    you're on a Rosie login node with access to the <code>dgxh100</code> partition.
+  </p>
+
+  <h3 style="margin-top:32px;margin-bottom:12px;">1. Clone &amp; Setup</h3>
+  <pre>git clone https://github.com/boyeaalhagie/InferX.git
+cd InferX
+mkdir -p results models</pre>
+
+  <div class="callout important">
+    <h4>Model Weights</h4>
+    <p>Qwen2.5-7B weights live at <code>/home/ad.msoe.edu/boyea/InferX/models/qwen2.5-7b</code> on Rosie.
+    If running elsewhere, download via HuggingFace: <code>huggingface-cli download Qwen/Qwen2.5-7B --local-dir models/qwen2.5-7b</code></p>
+  </div>
+
+  <h3 style="margin-top:32px;margin-bottom:12px;">2. Run a Benchmark</h3>
+  <pre><span style="color:var(--muted)"># PyTorch baseline — single request, 512 input tokens, 256 output</span>
+./scripts/submit_job.sh --engine pytorch -- \
+    --model models/qwen2.5-7b \
+    --input-tokens 512 --output-tokens 256 \
+    --batch-size 1 --requests 10
+
+<span style="color:var(--muted)"># vLLM — higher throughput, batch=16</span>
+./scripts/submit_job.sh --engine vllm -- \
+    --model models/qwen2.5-7b \
+    --input-tokens 512 --output-tokens 256 \
+    --batch-size 16 --requests 50
+
+<span style="color:var(--muted)"># Dry run — print sbatch script without submitting</span>
+./scripts/submit_job.sh --engine pytorch --dry-run -- --model models/qwen2.5-7b ...</pre>
+
+  <p style="font-size:13px;">Results land in <code>results/</code> as JSONL. Each record includes TTFT, ITL, tok/s, GPU memory, and SLURM job ID.</p>
+
+  <h3 style="margin-top:32px;margin-bottom:12px;">3. Build the TRT-LLM Engine</h3>
+  <pre><span style="color:var(--muted)"># Build Qwen2.5-7B at BF16, single GPU (takes ~25 min)</span>
+sbatch engines/tensorrt_llm/build_engine.sh
+
+<span style="color:var(--muted)"># Custom dtype or TP size</span>
+MODEL_PATH=models/qwen2.5-7b DTYPE=fp16 TP_SIZE=1 \
+    sbatch engines/tensorrt_llm/build_engine.sh
+
+<span style="color:var(--muted)"># Then benchmark with TRT-LLM</span>
+./scripts/submit_job.sh --engine tensorrt_llm -- \
+    --model models/qwen2.5-7b \
+    --trtllm-engine-dir results/trt_engines/qwen2.5-7b_bf16_tp1 \
+    --input-tokens 512 --output-tokens 256 --batch-size 4 --requests 50</pre>
+
+  <h3 style="margin-top:32px;margin-bottom:12px;">4. Profile with Nsight Systems</h3>
+  <pre><span style="color:var(--muted)"># Collect kernel timeline for PyTorch engine</span>
+ENGINE=pytorch INPUT_TOKENS=512 OUTPUT_TOKENS=128 \
+    sbatch profiling/nsight-systems/profile_nsys.sh
+
+<span style="color:var(--muted)"># Query top kernels from the SQLite output</span>
+python3 - &lt;&lt;'EOF'
+import sqlite3
+db = 'profiling/nsight-systems/&lt;your_profile&gt;.sqlite'
+conn = sqlite3.connect(db)
+rows = conn.execute('''
+  SELECT s.value, count(*), round(sum(k.end-k.start)/1e6,1) as ms
+  FROM CUPTI_ACTIVITY_KIND_KERNEL k
+  JOIN StringIds s ON s.id = k.demangledName
+  GROUP BY s.value ORDER BY ms DESC LIMIT 10
+''').fetchall()
+for r in rows: print(f'{r[2]:8.1f}ms  {r[1]:6d}x  {r[0][:60]}')
+EOF</pre>
+
+  <div class="callout warn">
+    <h4>Nsight Compute (ncu)</h4>
+    <p>Hardware performance counters are locked on Rosie (<code>ERR_NVGPUCTRPERM</code>). Contact HPC admin to enable:
+    <code>sudo sh -c 'echo 0 &gt; /proc/driver/nvidia/params/RmProfilingAdminOnly'</code></p>
+  </div>
+
+  <h3 style="margin-top:32px;margin-bottom:12px;">5. Reproduce the Full Experiment Suite</h3>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Experiment</th><th>Engine(s)</th><th>Command</th><th>Output</th></tr></thead>
+      <tbody>
+        <tr><td>§A Baseline</td><td>pytorch</td><td><code>--engine pytorch --input-tokens 128,512,2048 --batch-size 1,4,8</code></td><td><code>A_pytorch_*.jsonl</code></td></tr>
+        <tr><td>§B KV Cache</td><td>vllm</td><td><code>--engine vllm --input-tokens 512,1024,2048,4096 --batch-size 1–32</code></td><td><code>B_vllm_*.jsonl</code></td></tr>
+        <tr><td>§C Batching</td><td>both</td><td><code>--batch-size 1,2,4,8,16,32,64</code></td><td><code>C_*_bs*.jsonl</code></td></tr>
+        <tr><td>§D Latency</td><td>both</td><td><code>--input-tokens 128,1024,4096 --output-tokens 512,256,128</code></td><td><code>D_*.jsonl</code></td></tr>
+        <tr><td>§E Precision</td><td>both</td><td><code>--dtype bf16 --dtype fp16 --dtype int8</code></td><td><code>E_*_bf16/fp16/int8.jsonl</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:32px;margin-bottom:12px;">Requirements</h3>
+  <div class="card-grid">
+    <div class="card"><h3>PyTorch Engine</h3><p>Container: <code>msoe-pytorch-25.05-py3.sif</code><br>HuggingFace Transformers, bitsandbytes for INT8</p></div>
+    <div class="card"><h3>vLLM Engine</h3><p>Container: <code>msoe-vllm.sif</code><br>vLLM 0.6+, no extra dependencies</p></div>
+    <div class="card"><h3>TRT-LLM Engine</h3><p>Container: <code>msoe-pytorch-25.05-py3.sif</code><br>TRT-LLM 0.21.0 pip-installed to <code>~/.local</code></p></div>
+    <div class="card"><h3>Profiling</h3><p>nsys at <code>/usr/local/cuda/bin/nsys</code> inside pytorch container. Run via <code>singularity exec --nv</code>.</p></div>
   </div>
 </section>
 

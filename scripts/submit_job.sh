@@ -41,7 +41,7 @@ case "$ENGINE" in
     *)            echo "Unknown engine: $ENGINE"; exit 1 ;;
 esac
 
-JOB_NAME="inferx_${ENGINE}"
+JOB_NAME="inferx"
 RESULTS_DIR="${REPO_ROOT}/results"
 BENCH_SCRIPT="${REPO_ROOT}/benchmarks/bench_inference"
 
@@ -70,9 +70,9 @@ module load h100Env 2>/dev/null && echo "h100Env loaded" || echo "h100Env not av
 
 srun singularity exec \\
     --nv \\
+    --env PYTHONNOUSERSITE=1 \\
     -B /data:/data \\
     -B ${REPO_ROOT}:${REPO_ROOT} \\
-    -B /home/ad.msoe.edu/boyea:/home/ad.msoe.edu/boyea \\
     ${CONTAINER} \\
     python3 ${BENCH_SCRIPT} \\
     --engine ${ENGINE} \\

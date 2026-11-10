@@ -1,19 +1,25 @@
 """
-TensorRT-LLM inference engine.
+TensorRT-LLM 0.21.0 inference engine.
 
 Requires a pre-built TRT engine directory (produced by build_engine.sh).
-Wraps the tensorrt_llm Python runtime API.
+Uses the ModelRunner API from tensorrt_llm.runtime.
 
-Key TRT-LLM features we instrument:
-  - In-flight batching (executor API)
-  - Paged KV cache
-  - Quantization (INT8/FP8 set at engine build time)
-  - CUDA graphs (captured automatically by TRT-LLM runtime)
+Key TRT-LLM features active in this setup:
+  - Paged KV cache (enabled by --use_paged_context_fmha at build time)
+  - In-flight batching (via the executor backend)
+  - CUDA graphs (captured automatically by TRT runtime)
+  - Kernel fusion (via trtllm-build plugin flags)
+
+Note: TTFT is approximated as 30% of total latency because ModelRunner
+does not expose per-token timestamps. Use the streaming executor API
+for exact prefill/decode timing (future work).
 """
 
 import time
 from pathlib import Path
 from typing import List
+
+import torch
 
 from engines.base import InferenceEngine, GenerationResult, MemoryStats
 
@@ -24,7 +30,7 @@ class TRTLLMEngine(InferenceEngine):
         self,
         engine_dir: str,
         dtype: str = "bf16",
-        max_batch_size: int = 8,
+        max_batch_size: int = 32,
         model_path: str = "",
     ):
         super().__init__(model_path=model_path or engine_dir, dtype=dtype)
@@ -37,34 +43,24 @@ class TRTLLMEngine(InferenceEngine):
         if not engine_path.exists():
             raise FileNotFoundError(
                 f"TRT-LLM engine directory not found: {self.engine_dir}\n"
-                f"Build it first with: engines/tensorrt_llm/build_engine.sh"
+                f"Build it first: sbatch engines/tensorrt_llm/build_engine.sh"
             )
 
         print(f"[trtllm] Loading engine from {self.engine_dir}")
-        try:
-            from tensorrt_llm import LLM as TRTLLM
-            from tensorrt_llm.llmapi import LLM, BuildConfig
+        from tensorrt_llm.runtime import ModelRunner
+        self._runner = ModelRunner.from_dir(
+            engine_dir=self.engine_dir,
+            rank=0,
+        )
 
-            # Use the high-level LLM API if available (TRT-LLM >= 0.10)
-            self._runner = TRTLLM.from_dir(self.engine_dir)
-        except ImportError:
-            # Fall back to ModelRunner (older TRT-LLM versions)
-            from tensorrt_llm.runtime import ModelRunner
-            self._runner = ModelRunner.from_dir(
-                engine_dir=self.engine_dir,
-                rank=0,
-            )
-
-        # Load tokenizer from the original model path if provided
+        # Load tokenizer from original HF model path if provided
         if self.model_path and self.model_path != self.engine_dir:
-            try:
-                from transformers import AutoTokenizer
-                self.tokenizer = AutoTokenizer.from_pretrained(
-                    self.model_path, use_fast=True
-                )
-            except Exception as e:
-                print(f"[trtllm] Warning: could not load tokenizer: {e}")
-
+            from transformers import AutoTokenizer
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_path, use_fast=True
+            )
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
         print("[trtllm] Engine loaded.")
 
     def generate(
@@ -78,21 +74,21 @@ class TRTLLMEngine(InferenceEngine):
 
         from tensorrt_llm.runtime import SamplingConfig
 
-        # Tokenize
+        # Tokenize — ModelRunner expects List[Tensor(seq_len,)]
         input_ids_list = [
             self.tokenizer.encode(p, return_tensors=None)
             for p in prompts
         ]
-
-        import torch
-        input_ids_tensors = [torch.tensor(ids, dtype=torch.int32) for ids in input_ids_list]
+        input_ids_tensors = [
+            torch.tensor(ids, dtype=torch.int32) for ids in input_ids_list
+        ]
 
         sampling_config = SamplingConfig(
             end_id=self.tokenizer.eos_token_id,
             pad_id=self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
             max_new_tokens=max_new_tokens,
             temperature=1.0,
-            top_k=1,  # greedy
+            top_k=1,          # greedy — consistent with other engines
         )
 
         torch.cuda.synchronize()
@@ -109,21 +105,26 @@ class TRTLLMEngine(InferenceEngine):
         total_latency_ms = (t_end - t_start) * 1000.0
 
         texts, output_token_counts = [], []
-        for i, output_ids in enumerate(outputs):
-            # Strip input tokens from output
-            out_ids = output_ids[len(input_ids_list[i]):]
+        # outputs shape: (batch, beam, seq_len) — beam=1 for greedy
+        for i in range(len(prompts)):
+            if hasattr(outputs, 'tolist'):
+                # Tensor output
+                out_ids = outputs[i][0].tolist()
+            else:
+                out_ids = outputs[i]
+            # Strip input tokens
+            out_ids = out_ids[len(input_ids_list[i]):]
             texts.append(self.tokenizer.decode(out_ids, skip_special_tokens=True))
             output_token_counts.append(len(out_ids))
 
-        # TRT-LLM does not expose per-token timestamps through ModelRunner.
-        # TTFT approximation: assume prefill is proportional to input length.
-        # For accurate TTFT, use the executor streaming API (future work).
-        ttft_ms = total_latency_ms * 0.3  # rough estimate — replace with streaming API
+        # Approximate TTFT: prefill ≈ 30% of total wall time
+        # (ModelRunner doesn't expose per-token timestamps)
+        ttft_ms = total_latency_ms * 0.30
 
         return GenerationResult(
             texts=texts,
             ttft_ms=ttft_ms,
-            itl_ms_list=[],  # not available via ModelRunner — use executor API
+            itl_ms_list=[],   # not available via ModelRunner
             total_latency_ms=total_latency_ms,
             output_token_counts=output_token_counts,
         )
@@ -132,9 +133,11 @@ class TRTLLMEngine(InferenceEngine):
         if self._runner is not None:
             del self._runner
             self._runner = None
-        try:
-            import torch
-            torch.cuda.empty_cache()
-        except Exception:
-            pass
+        torch.cuda.empty_cache()
         print("[trtllm] Engine unloaded.")
+
+    def get_memory_stats(self) -> MemoryStats:
+        return MemoryStats(
+            gpu_allocated_gb=torch.cuda.memory_allocated() / 1e9,
+            gpu_reserved_gb=torch.cuda.memory_reserved() / 1e9,
+        )

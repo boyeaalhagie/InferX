@@ -31,13 +31,16 @@ class PyTorchCompiledEngine(PyTorchEngine):
 
     def load(self) -> None:
         super().load()
-        print("[pytorch_compiled] Applying torch.compile(mode='reduce-overhead')...")
-        # reduce-overhead: enables CUDA graph capture for the forward pass
-        # fullgraph=False allows partial compilation (safe for HF models with dynamic control)
+        print("[pytorch_compiled] Applying torch.compile(backend='cudagraphs')...")
+        # backend="cudagraphs": captures the forward pass as a CUDA graph.
+        # Unlike mode="reduce-overhead" (which uses Triton), the cudagraphs
+        # backend records GPU kernel sequences directly without JIT compilation.
+        # This eliminates CPU-side kernel dispatch overhead per decode step
+        # without requiring Triton or any additional compiler dependencies.
         self.model = torch.compile(
             self.model,
-            mode="reduce-overhead",
+            backend="cudagraphs",
             fullgraph=False,
         )
-        print("[pytorch_compiled] torch.compile applied. "
-              "First generate() call will trigger compilation (expect ~60s delay).")
+        print("[pytorch_compiled] torch.compile applied (cudagraphs backend). "
+              "First generate() call captures the graph (~10s).")

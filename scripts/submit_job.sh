@@ -71,6 +71,11 @@ module load h100Env 2>/dev/null && echo "h100Env loaded" || echo "h100Env not av
 NOUSERSITE=""
 [[ "${ENGINE}" == "vllm" ]] && NOUSERSITE="--env PYTHONNOUSERSITE=1"
 
+# TRT-LLM bindings explicitly load libcuda.so.1 (driver API).
+# SINGULARITYENV_LD_LIBRARY_PATH is applied before --nv prepends paths,
+# making the compat library discoverable inside the container.
+[[ "${ENGINE}" == "tensorrt_llm" ]] && export SINGULARITYENV_LD_LIBRARY_PATH="/usr/local/cuda/compat/lib"
+
 srun singularity exec \\
     --nv \\
     \${NOUSERSITE} \\

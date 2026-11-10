@@ -7,6 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:h100:8
 #SBATCH --cpus-per-gpu=8
+#SBATCH --mem=128G
 
 # Nsight Systems profiling wrapper.
 # Wraps bench_inference with nsys to capture full CPU/GPU timeline.
@@ -27,6 +28,7 @@ BENCH_ARGS=("$@")
 
 PROFILE_NAME="${PROFILE_DIR}/profile_${ENGINE}_${SLURM_JOB_ID}"
 
+module load h100Env 2>/dev/null && echo "h100Env loaded" || echo "h100Env not available"
 echo "Nsight Systems profiling"
 echo "Engine:   $ENGINE"
 echo "Profile:  ${PROFILE_NAME}.nsys-rep"

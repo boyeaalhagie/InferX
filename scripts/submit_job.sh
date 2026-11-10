@@ -14,7 +14,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Defaults
 ENGINE="pytorch"
-GPUS=8
+GPUS=1
 DRY_RUN=false
 PARTITION="dgxh100"
 MAIL_USER="boyea@ad.msoe.edu"
@@ -35,8 +35,8 @@ done
 
 # Select container based on engine
 case "$ENGINE" in
-    pytorch)      CONTAINER="/data/inferx/containers/pytorch.sif" ;;
-    vllm)         CONTAINER="/data/inferx/containers/vllm.sif" ;;
+    pytorch)      CONTAINER="/data/containers/msoe-pytorch-25.05-py3.sif" ;;
+    vllm)         CONTAINER="/data/containers/msoe-vllm.sif" ;;
     tensorrt_llm) CONTAINER="/data/inferx/containers/tensorrt_llm.sif" ;;
     *)            echo "Unknown engine: $ENGINE"; exit 1 ;;
 esac
@@ -56,6 +56,7 @@ JOB_SCRIPT=$(cat <<EOF
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:h100:${GPUS}
 #SBATCH --cpus-per-gpu=8
+#SBATCH --mem=128G
 
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Node:   \$(hostname)"
@@ -63,10 +64,15 @@ echo "Engine: ${ENGINE}"
 echo "Date:   \$(date)"
 echo ""
 
+# Load h100Env for profiler access (nsys, ncu)
+module load h100Env 2>/dev/null && echo "h100Env loaded" || echo "h100Env not available"
+
+
 srun singularity exec \\
     --nv \\
     -B /data:/data \\
     -B ${REPO_ROOT}:${REPO_ROOT} \\
+    -B /home/ad.msoe.edu/boyea:/home/ad.msoe.edu/boyea \\
     ${CONTAINER} \\
     python3 ${BENCH_SCRIPT} \\
     --engine ${ENGINE} \\

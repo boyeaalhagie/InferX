@@ -1,121 +1,254 @@
-# InferX — Inference Performance Engineering Platform
-
-> A performance study and optimization framework for production-scale Transformer inference on NVIDIA GPUs.
-
-**Core question:** How do we make Transformer inference faster, more memory-efficient, and more scalable?
-
-This is not an LLM. It's the engineering infrastructure *around* inference — a benchmark harness, profiling pipeline, and experiment framework running on MSOE's Rosie HPC cluster (H100 GPUs).
+# Rosie HPC — Agent Reference Guide
+## For TerraCare Development on MSOE's Supercomputer
 
 ---
 
-## Quick start
+## 1. Cluster Overview
 
-### 1. Check the environment (first time only)
-```bash
-sbatch scripts/check_environment.sh
-cat inferx_env_<JOBID>.out
-```
+Rosie is MSOE's GPU supercomputer. All GPU compute must go through the SLURM job scheduler — never run heavy jobs directly on the login/management node.
 
-### 2. Download the model (on login node)
-```bash
-./scripts/download_model.sh llama    # or: qwen, mistral
-```
+**Hardware:**
 
-### 3. Dry-run the harness
-```bash
-python3 benchmarks/bench_inference --dry-run \
-    --engine pytorch \
-    --model /data/inferx/models/meta-llama_llama-3.1-8b \
-    --input-tokens 512 --output-tokens 256 --batch-size 4 --requests 50
-```
+| Partition | Nodes | GPUs | Notes |
+|---|---|---|---|
+| `dgxh100` | 2 (dh-dgxh100-[1-2]) | 8x H100 per node (16 total) | **Use this for TerraCare** |
+| `dgx` | 3 (dh-dgx1-[1-3]) | 8x V100 per node | Fallback if H100 unavailable |
+| `teaching` | 20 (dh-node[1-20]) | 4x T4 per node | Dev/test only |
+| `batch` | 20 (dh-node[1-20]) | 4x T4 per node | Non-interactive batch |
+| `highmem` | 2 (dh-node[19-20]) | 4x T4 per node | High memory jobs |
 
-### 4. Submit a real benchmark job
-```bash
-./scripts/submit_job.sh --engine pytorch -- \
-    --model /data/inferx/models/meta-llama_llama-3.1-8b \
-    --input-tokens 512 --output-tokens 256 --batch-size 4 --requests 50
-```
+## 3. SLURM Quick Reference
 
-### 5. Run a full experiment sweep
 ```bash
-./scripts/run_experiment.sh A --dry-run   # preview
-./scripts/run_experiment.sh A             # submit all jobs
-```
-
-### 6. Generate a report
-```bash
-python3 reports/report_generator.py --results-dir results/
-python3 reports/report_generator.py --table --compare results/A_*.jsonl
+sinfo                              # View partitions and node status
+squeue                             # View all jobs in queue
+squeue -u boyea@ad.msoe.edu        # View your jobs only
+scancel JOBID                      # Cancel a job
+sacct -u boyea@ad.msoe.edu         # View job history
 ```
 
 ---
 
-## Architecture
+## 4. SRUN — Run Simple Tasks
 
-```
-bench_inference (CLI)
-    │
-    ├─ WorkloadGenerator  — token-calibrated synthetic prompts
-    │
-    ├─ InferenceEngine (abstract)
-    │       ├─ PyTorchEngine      — naive baseline, manual decode loop
-    │       ├─ VLLMEngine         — continuous batching, paged KV cache
-    │       └─ TRTLLMEngine       — NVIDIA optimized, in-flight batching
-    │
-    ├─ GPUPoller          — background nvidia-smi memory/utilization sampling
-    │
-    └─ BenchResult → JSONL → report_generator.py
+Use `srun` for quick commands and interactive sessions. Always run from the management node.
+
+```bash
+# Run a command on the default partition
+srun hostname
+
+# Check GPUs on H100 node
+srun --partition=dgxh100 --gres=gpu:h100:1 nvidia-smi
+
+# Check GPUs on V100 node
+srun --partition=dgx --gres=gpu:v100:8 nvidia-smi
+
+# Interactive session (teaching nodes only — NOT dgxh100)
+srun --pty --partition=teaching bash
+
+# Interactive session with T4 GPU
+srun --pty --gres=gpu:t4:1 --partition=teaching bash
+
+# Run a Python script with 1 H100
+srun --partition=dgxh100 --gres=gpu:h100:1 python /data/ai_club/TerraCare/scripts/run_hdbscan.py
+
+# Email alerts
+srun --mail-user=boyea@ad.msoe.edu --mail-type=BEGIN,END,FAIL --partition=dgxh100 --gres=gpu:h100:8 python script.py
 ```
 
-Profiling: Nsight Systems (system timeline) → Nsight Compute (kernel drill-down).
+> **Do NOT use `--pty` (interactive) on dgxh100 nodes. Use `sbatch` for all H100 jobs.**
 
 ---
 
-## Experiments
+## 5. SBATCH — Submit Batch Jobs
 
-| ID | Name | Research question |
-|----|------|-------------------|
-| A | Baseline | Establish PyTorch reference numbers |
-| B | KV-Cache | How does memory scale with sequence length × concurrency? |
-| C | Batching | Where does batching stop helping? |
-| D | Prefill vs Decode | How does the bottleneck shift between phases? |
-| E | Precision | What are the perf + memory + accuracy tradeoffs of INT8? |
+Use `sbatch` for all H100 jobs. Write a script, submit it, check the output file.
 
----
-
-## Repository layout
-
-```
-InferX/
-├── benchmarks/bench_inference    ← main CLI entrypoint
-├── engines/
-│   ├── base.py                   ← InferenceEngine abstract interface
-│   ├── pytorch/engine.py
-│   ├── vllm/engine.py
-│   └── tensorrt_llm/
-│       ├── engine.py
-│       └── build_engine.sh       ← compile HF weights → TRT engine
-├── configs/
-│   ├── default.yaml
-│   └── experiments/              ← A_baseline, B_kvcache, C_batching, ...
-├── scripts/
-│   ├── check_environment.sh      ← run this first on dgxh100
-│   ├── download_model.sh         ← run on login node
-│   ├── submit_job.sh             ← SLURM wrapper
-│   └── run_experiment.sh         ← sweep submitter
-├── profiling/
-│   ├── nsight-systems/profile_nsys.sh
-│   └── nsight-compute/profile_ncu.sh
-├── reports/report_generator.py
-└── results/baselines/            ← committed reference results (Phase 2)
+```bash
+sbatch job_script.sh               # Submit a job
+cat job_JOBID.out                  # View output
+tail -f job_JOBID.out              # Follow output live
+less job_JOBID.out                 # Page through output
 ```
 
 ---
 
-## Hardware
+## 6. SBATCH Script Templates
 
-**Cluster:** MSOE Rosie HPC — `dgxh100` partition
-**GPUs:** 8× NVIDIA H100 (80GB) per node
-**Scheduler:** SLURM (`sbatch` for all H100 jobs)
-**Containers:** Singularity 3.3 (not Docker)
-**Data:** `/data/inferx/` on shared cluster storage
+### Template 1 — H100 GPU Job (TerraCare Standard)
+
+```bash
+#!/bin/bash
+
+#SBATCH --job-name="terracare_hdbscan"
+#SBATCH --output=job_%j.out
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=boyea@ad.msoe.edu
+#SBATCH --partition=dgxh100
+#SBATCH --nodes=1
+#SBATCH --gres=gpu:h100:8
+#SBATCH --cpus-per-gpu=8
+
+## SCRIPT START
+srun hostname; pwd; date
+srun nvidia-smi
+srun python /data/ai_club/TerraCare/scripts/run_hdbscan.py
+## SCRIPT END
+```
+
+### Template 2 — H100 Job with Singularity Container
+
+```bash
+#!/bin/bash
+
+#SBATCH --job-name="terracare_cnn"
+#SBATCH --output=job_%j.out
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=boyea@ad.msoe.edu
+#SBATCH --partition=dgxh100
+#SBATCH --nodes=1
+#SBATCH --gres=gpu:h100:8
+#SBATCH --cpus-per-gpu=8
+
+CONTAINER="/data/containers/msoe-tensorflow.sif"
+PYTHON_FILE="/data/ai_club/TerraCare/scripts/train_resnet.py"
+
+## SCRIPT START
+srun hostname; pwd; date
+srun singularity exec --nv -B /data:/data ${CONTAINER} python3 ${PYTHON_FILE}
+## SCRIPT END
+```
+
+### Template 3 — CPU-Only Job (Data Prep / Ingest)
+
+```bash
+#!/bin/bash
+
+#SBATCH --job-name="terracare_ingest"
+#SBATCH --output=job_%j.out
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=boyea@ad.msoe.edu
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+
+## SCRIPT START
+srun python /data/ai_club/TerraCare/scripts/ingest_buildings.py
+## SCRIPT END
+```
+
+### Template 4 — T4 GPU Job (Dev/Test on Small Data)
+
+```bash
+#!/bin/bash
+
+#SBATCH --job-name="terracare_test"
+#SBATCH --output=job_%j.out
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=boyea@ad.msoe.edu
+#SBATCH --partition=teaching
+#SBATCH --nodes=1
+#SBATCH --gres=gpu:t4:1
+#SBATCH --cpus-per-gpu=4
+
+## SCRIPT START
+srun python /data/ai_club/TerraCare/scripts/test_pipeline.py
+## SCRIPT END
+```
+
+---
+
+## 7. Singularity Containers
+
+Rosie uses Singularity (not Docker). Containers are `.sif` files. Rosie runs **Singularity version 3.3**.
+
+### Pre-built containers available
+
+| Image | Path |
+|---|---|
+| Ubuntu 18.04 | `/data/containers/ubuntu_18.04.sif` |
+| Ubuntu 20.04 | `/data/containers/ubuntu_20.04.sif` |
+| TensorFlow | `/data/containers/msoe-tensorflow.sif` |
+
+### Key flags
+
+| Flag | Purpose |
+|---|---|
+| `--nv` | Mount NVIDIA GPUs into container — always use for GPU jobs |
+| `-B /data:/data` | Bind mount cluster data pool into container — always include |
+
+### Common commands
+
+```bash
+# Run a command inside a container
+singularity exec -B /data:/data /data/containers/ubuntu_20.04.sif cat /etc/os-release
+
+# Run with GPU access
+singularity exec --nv -B /data:/data /data/containers/msoe-tensorflow.sif nvidia-smi
+
+# Interactive CPU shell
+singularity shell -B /data:/data /data/containers/ubuntu_20.04.sif
+
+# Interactive GPU shell (via srun on teaching node)
+srun --pty --gres=gpu:t4:1 singularity shell --nv -B /data:/data /data/containers/msoe-tensorflow.sif
+
+# Build a custom container from DockerHub
+singularity build MyContainer.sif docker://ubuntu:latest
+```
+
+### Custom container definition file (example for RAPIDS)
+
+```
+Bootstrap: docker
+From: tensorflow:19.07-py3
+Registry: nvcr.io
+Namespace: nvidia
+
+%post
+    apt-get update && apt-get -y upgrade
+    apt-get -y install python3 python3-pip
+    python3 -m pip install --upgrade pip
+    python3 -m pip install cuml cupy pandas pyarrow torch
+```
+
+---
+
+
+---
+
+---
+
+## 9. Tips
+
+- Output saves as `job_JOBID.out` in the directory where you ran `sbatch`
+- Use `tail -f job_JOBID.out` to watch a running job live
+- Use `sinfo` to confirm dgxh100 nodes are available before submitting
+- Email alerts (`--mail-type=ALL`) are strongly recommended for long H100 jobs
+- Web portal available at: https://dh-ood.hpc.msoe.edu
+
+---
+
+## 10. DO NOT FORGET THIS
+
+### Always specify `--mem` — omitting it requests the entire node's RAM
+
+If you do not include `#SBATCH --mem=<size>` in your script, SLURM defaults to
+allocating **all available memory on the node** to your job. On dgxh100 this is
+~2 TB. Since H100 nodes almost always have at least one long-running job
+occupying them, your job will never find a fully-empty node and will sit in the
+queue indefinitely with reason `(Resources)` — even while jobs submitted *after*
+yours run successfully (they requested only what they needed and fit alongside
+existing jobs).
+
+**Fix:** always add an explicit memory request sized to your actual workload:
+
+```bash
+#SBATCH --mem=32G    # benchmark / compile jobs
+#SBATCH --mem=128G   # moderate training jobs
+#SBATCH --mem=256G   # large training jobs
+```
+
+You can verify what a queued job requested with:
+
+```bash
+scontrol show job <JOBID> | grep mem
+```

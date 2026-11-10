@@ -7,6 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:h100:1
 #SBATCH --cpus-per-gpu=8
+#SBATCH --mem=64G
 
 # Nsight Compute kernel profiling.
 # Use AFTER Nsight Systems has identified the dominant kernel.
@@ -31,6 +32,7 @@ TARGET_KERNEL="${TARGET_KERNEL:-}"
 BENCH_ARGS=("$@")
 PROFILE_NAME="${PROFILE_DIR}/ncu_${ENGINE}_${SLURM_JOB_ID}"
 
+module load h100Env 2>/dev/null && echo "h100Env loaded" || echo "h100Env not available"
 echo "Nsight Compute kernel profiling"
 echo "Engine:         $ENGINE"
 echo "Target kernel:  ${TARGET_KERNEL:-<all>}"

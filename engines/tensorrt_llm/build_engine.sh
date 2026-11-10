@@ -7,6 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:h100:1
 #SBATCH --cpus-per-gpu=8
+#SBATCH --mem=64G
 
 # TensorRT-LLM engine build script.
 # Run as: sbatch engines/tensorrt_llm/build_engine.sh

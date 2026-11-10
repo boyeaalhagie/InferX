@@ -5,8 +5,8 @@
 #SBATCH --mail-user=boyea@ad.msoe.edu
 #SBATCH --partition=dgxh100
 #SBATCH --nodes=1
-#SBATCH --gres=gpu:h100:8
-#SBATCH --cpus-per-gpu=8
+#SBATCH --gres=gpu:h100:1
+#SBATCH --mem=32G
 
 echo "========================================"
 echo "InferX Environment Check"

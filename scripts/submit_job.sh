@@ -35,10 +35,10 @@ done
 
 # Select container based on engine
 case "$ENGINE" in
-    pytorch)      CONTAINER="/data/containers/msoe-pytorch-25.05-py3.sif" ;;
-    vllm)         CONTAINER="/data/containers/msoe-vllm.sif" ;;
-    tensorrt_llm) CONTAINER="/data/inferx/containers/tensorrt_llm.sif" ;;
-    *)            echo "Unknown engine: $ENGINE"; exit 1 ;;
+    pytorch|pytorch_compiled) CONTAINER="/data/containers/msoe-pytorch-25.05-py3.sif" ;;
+    vllm)                     CONTAINER="/data/containers/msoe-vllm.sif" ;;
+    tensorrt_llm)             CONTAINER="/data/containers/msoe-tensorrt-llm.sif" ;;
+    *)                        echo "Unknown engine: $ENGINE"; exit 1 ;;
 esac
 
 JOB_NAME="inferx"

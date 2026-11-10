@@ -1,0 +1,75 @@
+# Experiment F — CUDA Graphs vs Normal Launch
+#
+# Research question: How much CPU launch overhead does each autoregressive
+# decode step incur, and does torch.compile(reduce-overhead) / CUDA graph
+# capture eliminate it?
+#
+# Design:
+#   - Same workload on pytorch (baseline) and pytorch_compiled (CUDA graphs)
+#   - BS=1 to isolate single-request decode latency
+#   - BS=4 to see if graphs help at moderate concurrency
+#   - Two sequence lengths: short decode (128 out) vs long decode (512 out)
+#   - Input fixed at 512 tokens (medium prompt)
+#
+# Expected finding:
+#   - pytorch_compiled should show lower ITL (inter-token latency)
+#     because each decode step skips Python dispatch + CUDA API overhead
+#   - TTFT may increase slightly (compilation warmup on first step)
+#   - GPU utilization should stay similar or improve slightly
+
+experiments:
+  - engine: pytorch
+    dtype: bf16
+    batch_size: 1
+    input_tokens: 512
+    output_tokens: 128
+    requests: 20
+
+  - engine: pytorch
+    dtype: bf16
+    batch_size: 1
+    input_tokens: 512
+    output_tokens: 512
+    requests: 10
+
+  - engine: pytorch
+    dtype: bf16
+    batch_size: 4
+    input_tokens: 512
+    output_tokens: 128
+    requests: 20
+
+  - engine: pytorch
+    dtype: bf16
+    batch_size: 4
+    input_tokens: 512
+    output_tokens: 512
+    requests: 10
+
+  - engine: pytorch_compiled
+    dtype: bf16
+    batch_size: 1
+    input_tokens: 512
+    output_tokens: 128
+    requests: 20
+
+  - engine: pytorch_compiled
+    dtype: bf16
+    batch_size: 1
+    input_tokens: 512
+    output_tokens: 512
+    requests: 10
+
+  - engine: pytorch_compiled
+    dtype: bf16
+    batch_size: 4
+    input_tokens: 512
+    output_tokens: 128
+    requests: 20
+
+  - engine: pytorch_compiled
+    dtype: bf16
+    batch_size: 4
+    input_tokens: 512
+    output_tokens: 512
+    requests: 10

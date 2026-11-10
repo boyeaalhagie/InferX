@@ -194,6 +194,10 @@ def load_engine(engine_name: str, model_path: str, dtype: str, args):
         from engines.pytorch.engine import PyTorchEngine
         return PyTorchEngine(model_path=model_path, dtype=dtype)
 
+    elif engine_name == "pytorch_compiled":
+        from engines.pytorch_compiled.engine import PyTorchCompiledEngine
+        return PyTorchCompiledEngine(model_path=model_path, dtype=dtype)
+
     elif engine_name == "vllm":
         from engines.vllm.engine import VLLMEngine
         return VLLMEngine(model_path=model_path, dtype=dtype,
@@ -224,7 +228,7 @@ def parse_args():
     p.add_argument("--model",         required=True,
                    help="Path to model directory (HuggingFace format)")
     p.add_argument("--engine",        required=True,
-                   choices=["pytorch", "vllm", "tensorrt_llm"],
+                   choices=["pytorch", "pytorch_compiled", "vllm", "tensorrt_llm"],
                    help="Inference engine to benchmark")
     p.add_argument("--input-tokens",  type=int, default=512,
                    help="Approximate number of input tokens per request")

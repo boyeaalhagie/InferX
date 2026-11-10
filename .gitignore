@@ -30,3 +30,15 @@ models/*
 .DS_Store
 *.swp
 .idea/
+
+# Scratch / install logs / cache
+logs/
+tmp/
+model.cache
+*.cache
+
+# SQLite nsys exports (large, regenerable from .nsys-rep)
+profiling/nsight-systems/*.sqlite
+
+# Reference / draft files
+report.html

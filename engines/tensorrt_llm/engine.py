@@ -46,6 +46,20 @@ class TRTLLMEngine(InferenceEngine):
                 f"Build it first: sbatch engines/tensorrt_llm/build_engine.sh"
             )
 
+        # Work around two import-time conflicts in the TRT-LLM 0.21.0 pip install:
+        # 1. torch._dynamo circular import: pre-initialize _dynamo before anything else
+        #    triggers it mid-way (transformers flex_attention uses @torch.compiler.disable).
+        # 2. tensorflow/protobuf conflict: tensorrt_llm.quantization imports AutoProcessor
+        #    which pulls in image_transforms which does `import tensorflow`; TRT-LLM
+        #    downgraded protobuf to 4.24.4 but TF 2.21.0 needs 6.31.1+.
+        import os, sys, types
+        os.environ.setdefault("USE_TF", "0")
+        os.environ.setdefault("USE_JAX", "0")
+        os.environ.setdefault("KERAS_BACKEND", "torch")
+        import torch._dynamo        # fully init before transformers touches it
+        import torch._dynamo.config
+        sys.modules.setdefault("tensorflow", types.ModuleType("tensorflow"))
+
         print(f"[trtllm] Loading engine from {self.engine_dir}")
         from tensorrt_llm.runtime import ModelRunner
         self._runner = ModelRunner.from_dir(

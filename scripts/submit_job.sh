@@ -37,7 +37,8 @@ done
 case "$ENGINE" in
     pytorch|pytorch_compiled) CONTAINER="/data/containers/msoe-pytorch-25.05-py3.sif" ;;
     vllm)                     CONTAINER="/data/containers/msoe-vllm.sif" ;;
-    tensorrt_llm)             CONTAINER="/data/containers/msoe-tensorrt-llm.sif" ;;
+    # TRT-LLM 0.21.0 is pip-installed to ~/.local inside the pytorch container.
+    tensorrt_llm)             CONTAINER="/data/containers/msoe-pytorch-25.05-py3.sif" ;;
     *)                        echo "Unknown engine: $ENGINE"; exit 1 ;;
 esac
 

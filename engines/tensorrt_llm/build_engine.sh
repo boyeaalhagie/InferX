@@ -50,57 +50,51 @@ mkdir -p "$CHECKPOINT_DIR"
 export SINGULARITYENV_LD_LIBRARY_PATH="/usr/local/cuda/compat/lib"
 
 echo "--- Step 1: Convert Qwen2.5-7B HF weights to TRT-LLM checkpoint ---"
+if [[ -f "${CHECKPOINT_DIR}/config.json" ]]; then
+    echo "Checkpoint already exists at ${CHECKPOINT_DIR} — skipping conversion."
+else
 srun singularity exec --nv \
     -B /data:/data \
     -B "${REPO_ROOT}:${REPO_ROOT}" \
     "${CONTAINER}" \
     python3 -c "
 import sys, os
+# Prevent TF import chain: TRT-LLM's quantize_by_modelopt imports AutoProcessor
+# which triggers tensorflow import, which needs protobuf>=6.31.1 (we have 4.24.4).
+os.environ['USE_TF'] = '0'
+os.environ['USE_JAX'] = '0'
+os.environ['KERAS_BACKEND'] = 'torch'
+os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = '1'
 sys.path.insert(0, os.path.expanduser('~/.local/lib/python3.12/site-packages'))
-from tensorrt_llm.models.qwen.convert import convert_hf_qwen
-from tensorrt_llm.models.qwen.config import QWenConfig
-from tensorrt_llm import str_dtype_to_torch, logger
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from tensorrt_llm.models.qwen.model import QWenForCausalLM
 
-dtype_map = {'bf16': 'bfloat16', 'fp16': 'float16'}
-torch_dtype = getattr(torch, dtype_map.get('${DTYPE}', 'bfloat16'))
-
-print('Loading HF model for weight conversion...')
-hf_model = AutoModelForCausalLM.from_pretrained(
-    '${MODEL_PATH}',
-    torch_dtype=torch_dtype,
-    device_map='cpu',
-)
-tokenizer = AutoTokenizer.from_pretrained('${MODEL_PATH}')
-
-config = QWenConfig.from_hugging_face(
-    '${MODEL_PATH}',
-    dtype='${DTYPE}',
-    mapping=None,
-)
-print('Config loaded. Converting weights...')
-convert_hf_qwen(
-    hf_model=hf_model,
-    hf_config=hf_model.config,
-    mapping=config.mapping,
-    dtype='${DTYPE}',
-    output_dir='${CHECKPOINT_DIR}',
-)
-print('Conversion complete.')
+print('Converting HF weights to TRT-LLM checkpoint (dtype=${DTYPE})...')
+# from_hugging_face loads the HF model and converts weights in one step
+model = QWenForCausalLM.from_hugging_face('${MODEL_PATH}', dtype='${DTYPE}')
+model.save_checkpoint('${CHECKPOINT_DIR}')
+print('Conversion complete. Checkpoint saved to: ${CHECKPOINT_DIR}')
 " 2>&1
+fi
 
 echo ""
 echo "--- Step 2: Build TRT-LLM engine ---"
+# trtllm-build uses long dtype names (bfloat16/float16), not bf16/fp16.
+case "${DTYPE}" in
+    bf16)  PLUGIN_DTYPE="bfloat16" ;;
+    fp16)  PLUGIN_DTYPE="float16"  ;;
+    *)     PLUGIN_DTYPE="${DTYPE}" ;;
+esac
+# Use the wrapper instead of trtllm-build directly: the wrapper pre-initializes
+# torch._dynamo and stubs tensorflow to avoid two import-time conflicts.
 srun singularity exec --nv \
     -B /data:/data \
     -B "${REPO_ROOT}:${REPO_ROOT}" \
     "${CONTAINER}" \
-    python3 "${HOME}/.local/bin/trtllm-build" \
+    python3 "${REPO_ROOT}/engines/tensorrt_llm/trtllm_build_wrapper.py" \
         --checkpoint_dir "${CHECKPOINT_DIR}" \
         --output_dir "${OUTPUT_DIR}" \
-        --gemm_plugin "${DTYPE}" \
-        --gpt_attention_plugin "${DTYPE}" \
+        --gemm_plugin "${PLUGIN_DTYPE}" \
+        --gpt_attention_plugin "${PLUGIN_DTYPE}" \
         --max_batch_size 32 \
         --max_input_len 4096 \
         --max_seq_len 4352 \

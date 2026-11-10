@@ -1,80 +1,80 @@
 #!/bin/bash
 #SBATCH --job-name="inferx_nsys"
-#SBATCH --output=inferx_nsys_%j.out
+#SBATCH --output=/home/ad.msoe.edu/boyea/InferX/profiling/nsight-systems/nsys_%j.out
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=boyea@ad.msoe.edu
 #SBATCH --partition=dgxh100
 #SBATCH --nodes=1
-#SBATCH --gres=gpu:h100:8
+#SBATCH --gres=gpu:h100:1
 #SBATCH --cpus-per-gpu=8
-#SBATCH --mem=128G
+#SBATCH --mem=64G
 
-# Nsight Systems profiling wrapper.
-# Wraps bench_inference with nsys to capture full CPU/GPU timeline.
+# Nsight Systems CPU/GPU timeline profiling.
+# nsys lives inside the pytorch container at /usr/local/cuda/bin/nsys.
+# Run from INSIDE singularity exec — the host has no nsys binary.
 #
-# Usage: sbatch profiling/nsight-systems/profile_nsys.sh \
-#            --engine pytorch --model /data/inferx/models/llama-3.1-8b \
-#            --input-tokens 512 --output-tokens 64 --batch-size 1 --requests 5
+# Env vars (set before sbatch):
+#   ENGINE         pytorch | vllm | tensorrt_llm  (default: pytorch)
+#   INPUT_TOKENS   prefill length                  (default: 512)
+#   OUTPUT_TOKENS  decode length                   (default: 128)
+#   BATCH_SIZE                                     (default: 1)
+#   REQUESTS       how many requests to run        (default: 5)
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONTAINER="${CONTAINER:-/data/inferx/containers/pytorch.sif}"
+REPO_ROOT="/home/ad.msoe.edu/boyea/InferX"
+CONTAINER="/data/containers/msoe-pytorch-25.05-py3.sif"
 PROFILE_DIR="${REPO_ROOT}/profiling/nsight-systems"
+
 ENGINE="${ENGINE:-pytorch}"
+MODEL="${MODEL:-${REPO_ROOT}/models/qwen2.5-7b}"
+INPUT_TOKENS="${INPUT_TOKENS:-512}"
+OUTPUT_TOKENS="${OUTPUT_TOKENS:-128}"
+BATCH_SIZE="${BATCH_SIZE:-1}"
+REQUESTS="${REQUESTS:-5}"
 
-# Remaining args are passed to bench_inference
-BENCH_ARGS=("$@")
-
-PROFILE_NAME="${PROFILE_DIR}/profile_${ENGINE}_${SLURM_JOB_ID}"
+PROFILE_OUT="${PROFILE_DIR}/profile_${ENGINE}_in${INPUT_TOKENS}_out${OUTPUT_TOKENS}_bs${BATCH_SIZE}_${SLURM_JOB_ID}"
 
 module load h100Env 2>/dev/null && echo "h100Env loaded" || echo "h100Env not available"
-echo "Nsight Systems profiling"
-echo "Engine:   $ENGINE"
-echo "Profile:  ${PROFILE_NAME}.nsys-rep"
-echo "Node:     $(hostname)"
-echo ""
-
-# Check nsys is available (may be outside container on the host)
-if command -v nsys &>/dev/null; then
-    NSYS_CMD="nsys"
-elif [[ -f /opt/nvidia/nsight-systems/*/bin/nsys ]]; then
-    NSYS_CMD=$(ls /opt/nvidia/nsight-systems/*/bin/nsys | head -1)
-else
-    echo "WARNING: nsys not found on host. Falling back to torch.profiler inside container."
-    NSYS_CMD=""
-fi
-
 mkdir -p "$PROFILE_DIR"
 
-if [[ -n "$NSYS_CMD" ]]; then
-    # Profile from outside the container, targeting the containerized process
-    srun "$NSYS_CMD" profile \
-        --trace=cuda,nvtx,osrt,cudnn,cublas \
-        --output="${PROFILE_NAME}" \
+echo "========================================"
+echo "Nsight Systems Profile"
+echo "========================================"
+echo "Job ID:     $SLURM_JOB_ID"
+echo "Node:       $(hostname)"
+echo "Engine:     $ENGINE"
+echo "Input tok:  $INPUT_TOKENS"
+echo "Output tok: $OUTPUT_TOKENS"
+echo "Batch size: $BATCH_SIZE"
+echo "Requests:   $REQUESTS"
+echo "Output:     ${PROFILE_OUT}.nsys-rep"
+echo ""
+
+# --sample=none  avoids perf_event_paranoid permission errors on HPC nodes.
+# --stats=true   prints kernel/API summary to stdout (useful without UI access).
+# nsys is at /usr/local/cuda/bin/nsys inside the container.
+srun singularity exec --nv \
+    -B /data:/data \
+    -B "${REPO_ROOT}:${REPO_ROOT}" \
+    "${CONTAINER}" \
+    /usr/local/cuda/bin/nsys profile \
+        --trace=cuda,nvtx,cudnn,cublas \
+        --sample=none \
+        --output="${PROFILE_OUT}" \
         --force-overwrite=true \
-        --capture-range=cudaProfilerApi \
-        singularity exec --nv \
-            -B /data:/data \
-            -B "${REPO_ROOT}:${REPO_ROOT}" \
-            "${CONTAINER}" \
-            python3 "${REPO_ROOT}/benchmarks/bench_inference" \
-            --engine "$ENGINE" \
-            "${BENCH_ARGS[@]}"
-else
-    # Fallback: use torch.profiler via INFERX_TORCH_PROFILE env var
-    srun singularity exec --nv \
-        -B /data:/data \
-        -B "${REPO_ROOT}:${REPO_ROOT}" \
-        "${CONTAINER}" \
-        bash -c "
-            INFERX_TORCH_PROFILE=1 \
-            INFERX_PROFILE_OUTPUT='${PROFILE_NAME}_torch' \
-            python3 '${REPO_ROOT}/benchmarks/bench_inference' \
-            --engine '$ENGINE' ${BENCH_ARGS[*]}
-        "
-fi
+        --stats=true \
+        python3 "${REPO_ROOT}/benchmarks/bench_inference" \
+            --engine "${ENGINE}" \
+            --model "${MODEL}" \
+            --dtype bf16 \
+            --input-tokens "${INPUT_TOKENS}" \
+            --output-tokens "${OUTPUT_TOKENS}" \
+            --batch-size "${BATCH_SIZE}" \
+            --requests "${REQUESTS}" \
+            --warmup 1 \
+        2>&1
 
 echo ""
-echo "Profile written to: ${PROFILE_NAME}"
-echo "View with: nsys-ui ${PROFILE_NAME}.nsys-rep"
+echo "Profile written to: ${PROFILE_OUT}.nsys-rep"
+echo "Transfer to local machine to view in Nsight Systems UI."

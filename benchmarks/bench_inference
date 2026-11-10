@@ -15,10 +15,24 @@ Usage:
     python3 bench_inference --dry-run --engine vllm --model /data/inferx/models/qwen2.5-7b
 """
 
-import argparse
-import json
 import os
 import sys
+import types
+
+# TRT-LLM 0.21.0 pip install downgraded transformers to a version whose
+# image_transforms.py unconditionally does `import tensorflow as tf` at module
+# load time. TF 2.21.0 needs protobuf>=6.31.1 but TRT-LLM installed 4.24.4,
+# so any import of transformers that touches image_transforms crashes.
+# Fix: stub tensorflow + pre-init torch._dynamo before anything else runs.
+os.environ.setdefault("USE_TF", "0")
+os.environ.setdefault("USE_JAX", "0")
+os.environ.setdefault("KERAS_BACKEND", "torch")
+import torch._dynamo        # fully initialize before transformers touches it
+import torch._dynamo.config
+sys.modules.setdefault("tensorflow", types.ModuleType("tensorflow"))
+
+import argparse
+import json
 import time
 import uuid
 import socket
@@ -208,7 +222,7 @@ def load_engine(engine_name: str, model_path: str, dtype: str, args):
         engine_dir = args.trtllm_engine_dir or str(
             REPO_ROOT / "results" / "trt_engines" / Path(model_path).name
         )
-        return TRTLLMEngine(engine_dir=engine_dir, dtype=dtype)
+        return TRTLLMEngine(engine_dir=engine_dir, dtype=dtype, model_path=model_path)
 
     else:
         raise ValueError(f"Unknown engine: {engine_name}")

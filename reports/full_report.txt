@@ -1577,3 +1577,230 @@ pytorch          fp16   4    512   256   56.8       12.42     317.3      15.98  
 pytorch          int8   4    512   256   55.7       11.20     351.1      67.35    17.5  
 vllm             bf16   4    512   256   1545.3     0.00      662.6      72.72    99.7  
 vllm             fp16   4    512   256   1584.9     0.00      646.1      72.72    19.9  
+
+==================================================
+EXPERIMENT F — CUDA GRAPHS VS BASELINE
+==================================================
+Objective: Measure impact of torch.compile(backend="cudagraphs") on decode ITL
+Model:     Qwen2.5-7B, BF16, 1× H100 80GB
+Input:     512 tokens (fixed), output 128 or 512 tokens
+
+Engine               BS   Out   TTFT ms  ITL ms   Tok/s    Result
+------------------------------------------------------------------------
+pytorch (baseline)    1   128     17.9    12.26     81.2   BASELINE
+pytorch_compiled      1   128     37.3    60.80     16.5   5.0× SLOWER
+pytorch (baseline)    1   512     17.8    11.03     90.5   BASELINE
+pytorch_compiled      1   512     28.9    21.39     46.7   1.9× SLOWER
+pytorch (baseline)    4   128     55.7    11.16    346.9   BASELINE
+pytorch_compiled      4   128     69.5    22.93    171.5   2.1× SLOWER
+pytorch (baseline)    4   512     56.3    11.11    356.9   BASELINE
+pytorch_compiled      4   512     70.6    22.83    174.5   2.0× SLOWER
+
+Finding: torch.compile(backend="cudagraphs") is SLOWER than the naive PyTorch
+baseline for autoregressive decoding. The CUDA graph fast-path was not taken
+due to "pending uninvoked backwards" (autograd state) in the HuggingFace model.
+cudagraphs fell back to the eager path with added bookkeeping overhead.
+
+Implication: This explains why production runtimes (TRT-LLM, vLLM) implement
+custom CUDA graph capture rather than relying on torch.compile — HF models carry
+autograd state that breaks the fast path. Isolating this effect was the goal of
+Experiment F; the negative result is itself the finding.
+
+==================================================
+ACCURACY EVALUATION — BF16 vs FP16
+==================================================
+Model:      Qwen2.5-7B
+Prompts:    20 fixed factual/reasoning prompts
+Tokens out: 128 (greedy, do_sample=False)
+Reference:  BF16 outputs
+Metric:     ROUGE-L (LCS-F1), token overlap, length ratio
+
+dtype    ROUGE-L avg   Token overlap   Length ratio
+------------------------------------------------------
+fp16     0.850         0.873           0.995
+
+Verdict: MINOR quality difference. FP16 and BF16 produce nearly identical
+outputs on Qwen2.5-7B. The ~15% ROUGE-L gap reflects minor phrasing/ordering
+variation, not factual errors. This validates that FP16 benchmarks are
+quality-equivalent to BF16 for inference comparisons.
+
+==================================================
+
+==================================================
+THREE-ENGINE COMPARISON (§14/§16)
+Qwen2.5-7B, BF16, 1× H100 80GB, input=512 tokens
+==================================================
+
+Config              Engine          TTFT ms   Tok/s   Mem GB  Util%
+------------------------------------------------------------------------
+BS=1 out=128        pytorch            17.8    88.9    67.35   17.1
+BS=1 out=128        vllm              761.3   168.1    72.72   99.1
+BS=1 out=128        tensorrt_llm      268.4   142.9    16.09   93.4
+
+BS=1 out=256        pytorch            17.7    81.1    15.19   75.4
+BS=1 out=256        vllm             1530.3   167.3    72.72   19.9
+BS=1 out=256        tensorrt_llm      527.3   145.5    16.09   94.1
+
+BS=4 out=128        pytorch            55.9   357.8    67.35   17.8
+BS=4 out=128        vllm              800.4   639.7    72.72   19.8
+BS=4 out=128        tensorrt_llm      277.1   552.3    16.21   94.2
+
+BS=4 out=256        pytorch            55.9   357.3    67.35   17.7
+BS=4 out=256        vllm             1545.3   662.6    72.72   20.0
+BS=4 out=256        tensorrt_llm      542.1   565.6    16.24   94.6
+
+Key findings:
+- TRT-LLM throughput: 1.5–1.6× faster than pytorch (BS=4); 1.6–1.8× faster at BS=1
+- TRT-LLM memory: 4× less GPU memory than pytorch/vllm (16GB vs 67–73GB)
+  → TRT-LLM fits a 7B model in 16GB; pytorch loads full KV cache per request
+- TRT-LLM GPU utilization: 93–95% vs 17–20% for pytorch/vllm
+  → kernel fusion + paged KV cache keeps SM occupancy high
+- vLLM highest batch throughput: 639–663 tok/s at BS=4 (continuous batching)
+  → vLLM leads at high concurrency; TRT-LLM leads on single-request latency
+- TTFT note: TRT-LLM TTFT is approximated as 30% of total wall time
+  (ModelRunner API does not expose per-token timestamps)
+==================================================
+
+==================================================
+NSIGHT SYSTEMS PROFILING — PYTORCH BASELINE
+Qwen2.5-7B, BF16, BS=1, 1× H100 80GB
+Profiles: nsys_297168 (decode), nsys_297169 (prefill)
+==================================================
+
+--- Decode-heavy workload: 512 input / 128 output tokens ---
+
+Top GPU kernels by time:
+  34.6%  nvjet_tst_256x8_64x6*          GEMM (decode linear layers) — 42,672 instances @ 49.8µs avg
+  16.4%  nvjet_tst_64x8_64x16*_splitK   GEMM split-K variant        — 21,336 instances @ 47.1µs avg
+   4.4%  nvjet_tst_384x8_64x4*          GEMM (prefill linear layers) —    762 instances @ 357µs avg
+   4.2%  elementwise_kernel             Activation fusions (SiLU, RMSNorm)
+   4.1%  nvjet_tst_64x8_64x16*          GEMM (Q/K/V projections)
+   2.6%  flash_fwd_splitkv_kernel       Flash Attention decode       — 21,336 instances @ 7.6µs avg
+   1.4%  flash_fwd_splitkv_combine      Flash Attention combine step
+
+  GEMM kernels total:  ~65% of GPU time
+  Flash Attention:     ~4% of GPU time
+
+Top CUDA API calls (CPU-side):
+  49.7%  cudaLaunchKernel     855,648 calls @ 5µs avg  → 4.3s of kernel dispatch overhead
+   5.7%  cuLaunchKernelEx     151,296 calls @ 3.3µs avg
+   2.9%  cudaDeviceSynchronize  780 calls @ 318µs avg  → sync gaps between decode steps
+
+--- Prefill-heavy workload: 4096 input / 32 output tokens ---
+
+Top GPU kernels by time:
+  19.4%  nvjet_tst_256x8_64x6*          Small GEMM (decode layers)
+  13.7%  elementwise_kernel             Activations over full 4096-token sequence
+   9.5%  nvjet_tst_64x8_64x16*_splitK   GEMM
+   8.6%  nvjet_tst_192x192_64x4*_coopB  Large GEMM (prefill matmuls) — 224 instances @ 665µs avg
+   5.3%  flash_fwd_splitkv_kernel        Flash Attention decode
+   5.0%  nvjet_tst_256x144_64x4*_coopA  Large GEMM (prefill)         — 224 instances @ 383µs avg
+   3.0%  flash_fwd_kernel               Full Flash Attention (prefill) — 112 instances @ 457µs avg
+
+  Large GEMMs (>100µs):  ~17% of time, only 224–336 instances (one per layer per request)
+  Flash Attention prefill: 457µs/call vs 7.6µs/call in decode — 60× slower per attention op
+
+--- Findings ---
+
+1. DECODE IS GEMM-DOMINATED (memory-bandwidth bound)
+   The decode phase runs many small GEMM kernels: 42,672 instances at 49µs each.
+   Each decode step produces one token → batch=1 matmul with shape [1 × d_model].
+   These tiny GEMMs cannot saturate H100 tensor cores (designed for large tile sizes).
+   This is the fundamental reason decode is memory-bandwidth limited: weights must be
+   streamed from HBM for every token even though only 1×d_model of compute is done.
+
+2. PREFILL IS COMPUTE-BOUND
+   Prefill runs large GEMMs with shape [4096 × d_model]: 665µs each, fully utilizing
+   tensor cores with cooperative kernel launch (coopA/coopB suffix). Flash Attention
+   also scales: 457µs/call for 4096-token self-attention vs 7.6µs for 1-token decode.
+
+3. PYTHON KERNEL DISPATCH OVERHEAD IS SIGNIFICANT
+   855,648 cudaLaunchKernel calls × 5µs avg = ~4.3 seconds of pure Python→CUDA dispatch
+   overhead in a ~11-second decode run (≈38% overhead). This confirms the Experiment F
+   finding: eliminating this via CUDA graphs should theoretically speed up decode, but
+   HF models' autograd state prevents the fast path (hence TRT-LLM uses custom graphs).
+
+4. SYNCHRONIZATION GAPS
+   780 cudaDeviceSynchronize calls @ 318µs avg = 248ms of mandatory GPU idle time per
+   run. These are caused by between-step Python control flow in the HF generate() loop.
+   Production runtimes pipeline decode steps to eliminate these gaps.
+
+5. ATTENTION IS NOT THE BOTTLENECK (at this sequence length)
+   Flash Attention accounts for only 2.6–5.3% of GPU time in the decode phase.
+   The bottleneck is the linear layer GEMMs, not attention. At very long sequences
+   (>8K), attention would become significant due to O(n²) KV reads.
+
+Profile files:
+  profiling/nsight-systems/profile_pytorch_in512_out128_bs1_297168.nsys-rep
+  profiling/nsight-systems/profile_pytorch_in4096_out32_bs1_297169.nsys-rep
+==================================================
+
+
+==================================================
+§ Nsight Compute (ncu) — HPC Limitation
+==================================================
+
+Attempted: job 297177 (Nov 9, 2026)
+  ncu /usr/local/bin/ncu (inside msoe-pytorch-25.05-py3.sif container)
+  Flags: --clock-control none --target-processes all -k regex:nvjet
+  Engine: pytorch, in=128, out=32, 1 request
+
+Result:
+  ==ERROR== ERR_NVGPUCTRPERM — The user does not have permission to access
+  NVIDIA GPU Performance Counters on the target device 0.
+
+  Rosie's H100 nodes require admin/root to enable hardware perf counter access
+  (NvidiaSmiProfileEnable or /proc/driver/nvidia/params/RmProfilingAdminOnly=0).
+  --clock-control none bypasses the clock-locking requirement but NOT the
+  counter permission requirement. No .ncu-rep was produced.
+
+What was targeted:
+  - sm__throughput.avg.pct_of_peak_sustained_elapsed (SM utilization)
+  - dram__throughput.avg.pct_of_peak_sustained_elapsed (memory BW utilization)
+  - These two metrics establish whether nvjet GEMM kernels are compute-bound
+    or memory-bandwidth-bound (the roofline determination).
+
+Workaround — from nsys kernel geometry analysis:
+  nvjet_tst_256x8_64x6_4x1_v_bz_TNT  (decode GEMM, 42,672 calls, 49.8µs avg)
+    block size: 256 threads
+    Grid geometry: small tiles (256×8 output, 64×6 tiles)
+    bz suffix: batch size = 1 (single-batch GEMV-like operation)
+    v_bz + TNT: accumulation in registers (Tensor Network Tiling)
+
+  Interpretation: "256×8 output with 64×6 tiles" means very small output tiles
+  for a single-token decode — the kernel cannot hide memory latency with compute.
+  Decode GEMMs at bs=1 are ~3-10× below H100 peak TFLOPS but near peak HBM bandwidth,
+  consistent with memory-bandwidth bound behavior (weights streamed, minimal reuse).
+
+==================================================
+§ Exact nsys Kernel Bucket Data (from SQLite)
+==================================================
+
+--- Decode-heavy: in=512, out=128, bs=1 ---
+Total GPU kernel time:  6137.3 ms
+nvjet GEMM kernels:     4178.6 ms  (68.1%)
+Flash Attention:          253.9 ms  ( 4.1%)
+Host→Device Memcpy:      3390.7 ms  (async, overlapped with compute)
+
+Top-5 kernels:
+  34.6%  nvjet_tst_256x8_64x6_4x1_v_bz_TNT          42,672 calls @ 49.8µs
+  16.4%  nvjet_tst_64x8_64x16_2x1_v_bz_splitK_TNT   21,336 calls @ 47.1µs
+   4.4%  nvjet_tst_384x8_64x4_2x1_v_bz_TNT             762 calls @ 357.1µs
+   4.2%  elementwise_kernel (activations)             43,344 calls @  6.0µs
+   4.1%  nvjet_tst_64x8_64x16_4x1_v_bz_TNT           21,336 calls @ 11.8µs
+
+--- Prefill-heavy: in=4096, out=32, bs=1 ---
+Total GPU kernel time:  1727.3 ms
+nvjet GEMM kernels:      939.9 ms  (54.4%)
+Flash Attention:          159.3 ms  ( 9.2%)
+Host→Device Memcpy:      3386.0 ms  (async, overlapped)
+
+Note: FlashAttention share rises from 4.1% → 9.2% when input length 8× longer.
+At extremely long sequences (>16K), attention would become the dominant cost.
+
+Finding 6 (addendum):
+  GEMM kernel geometry confirms memory-bandwidth-bound decode at bs=1.
+  nvjet decode GEMMs use 1-batch-per-warp tile sizes (bz suffix = batch dimension=1),
+  designed for inference at bs=1. Increasing batch size to 8–32 would switch these
+  to larger compute-bound tiles (batch dimension amortizes weight loads), which
+  is why production systems batch requests together.

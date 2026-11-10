@@ -68,9 +68,12 @@ echo ""
 module load h100Env 2>/dev/null && echo "h100Env loaded" || echo "h100Env not available"
 
 
+NOUSERSITE=""
+[[ "${ENGINE}" == "vllm" ]] && NOUSERSITE="--env PYTHONNOUSERSITE=1"
+
 srun singularity exec \\
     --nv \\
-    --env PYTHONNOUSERSITE=1 \\
+    \${NOUSERSITE} \\
     -B /data:/data \\
     -B ${REPO_ROOT}:${REPO_ROOT} \\
     ${CONTAINER} \\

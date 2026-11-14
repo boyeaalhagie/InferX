@@ -1,7 +1,7 @@
 # InferX default configuration
 # Override any field via CLI flags or experiment-specific configs.
 
-model: /home/ad.msoe.edu/boyea/InferX/models/qwen2.5-7b
+model: models/qwen2.5-7b
 engine: pytorch
 dtype: bf16
 

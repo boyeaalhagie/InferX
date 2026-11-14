@@ -1,4 +1,26 @@
 ==================================================
+READ FIRST — MEASUREMENT NOTES
+==================================================
+This file is generated output from the benchmark runs. Some fields are not
+reliable and should not be compared across runs or engines:
+
+1. GPU Memory Peak / GPU Utilization: the nvidia-smi poller in
+   benchmarks/bench_inference queries EVERY GPU on the 8-GPU node, not just the
+   assigned one. On node dh-dgxh100-2 every PyTorch run reports 67.35 GB and
+   ~17-20% utilization regardless of workload. vLLM always reports ~72.7 GB
+   because it pre-allocates 90% of GPU memory.
+
+2. vLLM TTFT: the offline LLM.generate API did not return per-request metrics,
+   so ttft_ms falls back to the total batch latency. It is NOT time to first
+   token.
+
+3. TensorRT-LLM TTFT: ModelRunner exposes no per-token timing, so ttft_ms is a
+   placeholder (30% of total wall time), not a measurement.
+
+Throughput (tok/s) and PyTorch TTFT/ITL are measured correctly.
+See docs/ for the corrected analysis.
+
+==================================================
 LLM INFERENCE PERFORMANCE REPORT
 ==================================================
 
@@ -1651,14 +1673,12 @@ BS=4 out=256        tensorrt_llm      542.1   565.6    16.24   94.6
 
 Key findings:
 - TRT-LLM throughput: 1.5–1.6× faster than pytorch (BS=4); 1.6–1.8× faster at BS=1
-- TRT-LLM memory: 4× less GPU memory than pytorch/vllm (16GB vs 67–73GB)
-  → TRT-LLM fits a 7B model in 16GB; pytorch loads full KV cache per request
-- TRT-LLM GPU utilization: 93–95% vs 17–20% for pytorch/vllm
-  → kernel fusion + paged KV cache keeps SM occupancy high
-- vLLM highest batch throughput: 639–663 tok/s at BS=4 (continuous batching)
-  → vLLM leads at high concurrency; TRT-LLM leads on single-request latency
-- TTFT note: TRT-LLM TTFT is approximated as 30% of total wall time
-  (ModelRunner API does not expose per-token timestamps)
+- vLLM throughput: highest of the three at both BS=1 and BS=4 (e.g. 639.7 vs
+  552.3 vs 357.8 tok/s at BS=4, out=128)
+- Mem GB / Util% columns are NOT comparable (see READ FIRST at the top): the
+  poller reads every GPU on the node, and vLLM pre-allocates 90% of memory.
+- TTFT columns: only pytorch TTFT is measured. vLLM TTFT is total batch latency
+  and TRT-LLM TTFT is a 30%-of-wall-time placeholder.
 ==================================================
 
 ==================================================
@@ -1762,15 +1782,13 @@ What was targeted:
 
 Workaround — from nsys kernel geometry analysis:
   nvjet_tst_256x8_64x6_4x1_v_bz_TNT  (decode GEMM, 42,672 calls, 49.8µs avg)
-    block size: 256 threads
-    Grid geometry: small tiles (256×8 output, 64×6 tiles)
-    bz suffix: batch size = 1 (single-batch GEMV-like operation)
-    v_bz + TNT: accumulation in registers (Tensor Network Tiling)
+    (nvjet kernel names are not publicly documented; no meaning is assumed
+    for the individual name fields.)
 
-  Interpretation: "256×8 output with 64×6 tiles" means very small output tiles
-  for a single-token decode — the kernel cannot hide memory latency with compute.
-  Decode GEMMs at bs=1 are ~3-10× below H100 peak TFLOPS but near peak HBM bandwidth,
-  consistent with memory-bandwidth bound behavior (weights streamed, minimal reuse).
+  Interpretation (analytical, no hardware counters): at bs=1 each BF16 weight
+  is read once per step for ~2 FLOPs → ~1 FLOP/byte, far below the H100 BF16
+  ridge point (~989 TFLOP/s dense / 3.35 TB/s ≈ 295 FLOP/byte). Decode GEMMs
+  are therefore memory-bandwidth bound (weights streamed, minimal reuse).
 
 ==================================================
 § Exact nsys Kernel Bucket Data (from SQLite)
@@ -1799,8 +1817,8 @@ Note: FlashAttention share rises from 4.1% → 9.2% when input length 8× longer
 At extremely long sequences (>16K), attention would become the dominant cost.
 
 Finding 6 (addendum):
-  GEMM kernel geometry confirms memory-bandwidth-bound decode at bs=1.
-  nvjet decode GEMMs use 1-batch-per-warp tile sizes (bz suffix = batch dimension=1),
-  designed for inference at bs=1. Increasing batch size to 8–32 would switch these
-  to larger compute-bound tiles (batch dimension amortizes weight loads), which
-  is why production systems batch requests together.
+  Decode at bs=1 is memory-bandwidth bound (~1 FLOP/byte). Batching raises
+  arithmetic intensity roughly in proportion to batch size (~B FLOP/byte), so
+  each weight read serves more tokens. Even at bs=64 (~64 FLOP/byte) decode stays
+  below the ~295 FLOP/byte ridge, which is why throughput keeps scaling with
+  batch size and ITL stays nearly flat up to bs=32.

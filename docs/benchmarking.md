@@ -5,18 +5,18 @@
 ```bash
 # Submit a benchmark job for the pytorch engine
 ./scripts/submit_job.sh --engine pytorch -- \
-    --model /home/ad.msoe.edu/boyea/InferX/models/qwen2.5-7b \
+    --model models/qwen2.5-7b \
     --input-tokens 512 --output-tokens 256 --batch-size 4 --requests 50
 
 # vLLM
 ./scripts/submit_job.sh --engine vllm -- \
-    --model /home/ad.msoe.edu/boyea/InferX/models/qwen2.5-7b \
+    --model models/qwen2.5-7b \
     --input-tokens 512 --output-tokens 256 --batch-size 4 --requests 50
 
 # TensorRT-LLM (needs pre-built engine)
 ./scripts/submit_job.sh --engine tensorrt_llm -- \
-    --model /home/ad.msoe.edu/boyea/InferX/models/qwen2.5-7b \
-    --trtllm-engine-dir /home/ad.msoe.edu/boyea/InferX/results/trt_engines/qwen2.5-7b_bf16_tp1 \
+    --model models/qwen2.5-7b \
+    --trtllm-engine-dir results/trt_engines/qwen2.5-7b_bf16_tp1 \
     --input-tokens 512 --output-tokens 256 --batch-size 4 --requests 50
 
 # Dry run (print sbatch script without submitting)
@@ -87,14 +87,15 @@ Each run writes one JSON record to `results/`:
 | `latency_ms` | End-to-end wall time for the full batch |
 | `output_tokens_per_sec` | Generated (output) tokens per second: `batch × output_tokens / latency_s` |
 | `total_tokens_per_sec` | (input + output) tokens per second |
-| `gpu_memory_peak_gb` | Peak `torch.cuda.memory_allocated()` during inference |
-| `gpu_utilization_pct` | Mean GPU SM utilization (from `nvidia-smi`) during run |
+| `gpu_memory_peak_gb` | Max `memory.used` reported by `nvidia-smi` during the run. **Caveat:** the poller reads every GPU on the node, so on shared nodes this can include other jobs |
+| `gpu_utilization_pct` | Mean `utilization.gpu` from `nvidia-smi`, averaged over all GPUs on the node (same caveat) |
 
 **Note on vLLM ITL**: vLLM's offline inference API (`LLM.generate`) does not expose
-per-token timestamps, so `itl_ms` is 0 for vLLM. Use TTFT as the latency metric.
+per-request metrics in this setup, so `itl_ms` is 0 and `ttft_ms` falls back to the total batch
+latency. Compare vLLM on throughput only.
 
 **Note on TRT-LLM TTFT**: `ModelRunner` does not expose per-token timestamps.
-TTFT is approximated as 30% of total wall time (prefill fraction heuristic).
+`ttft_ms` is a placeholder (30% of total wall time), not a measurement. Compare TRT-LLM on throughput only.
 Use the streaming executor API for exact timing.
 
 ## Experiment Naming Convention
@@ -108,6 +109,8 @@ Result files follow the pattern `{experiment}_{engine}_{dtype}_{params}.jsonl`:
 | `C_`   | Batching efficiency (batch size 1–64, fixed input/output) |
 | `D_`   | Input/output length sensitivity |
 | `E_`   | Precision comparison (bf16 / fp16 / int8) |
+| `exp_F_` | CUDA graphs: `pytorch` vs `pytorch_compiled` |
+| `trtllm_` | TensorRT-LLM throughput runs |
 
 ## TensorRT-LLM Engine Build
 

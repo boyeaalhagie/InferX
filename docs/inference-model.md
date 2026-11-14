@@ -1,63 +1,86 @@
 # Inference Performance Model
 
-## The Two-Phase Structure of Autoregressive LLM Inference
+## The Two Phases of Autoregressive Inference
 
-Every autoregressive LLM inference request passes through two distinct computational phases:
+Every request passes through two phases with very different hardware behavior.
 
 ### Prefill (prompt processing)
-- Processes all N input tokens in a single forward pass
-- Computes Q, K, V projections for every token simultaneously → large batched GEMMs
+- Processes all N prompt tokens in one forward pass → large GEMMs with shape `[N × d_model]`
 - Builds the KV cache entries for all N positions
-- **Compute profile**: large GEMMs with shape [N × d_model], high arithmetic intensity
-- **Bound by**: compute (tensor cores saturated for N > ~512 tokens on H100)
-- **Measured TTFT**: 12.6ms (N=128) → 56.7ms (N=2048) → 117.6ms (N=4096) on H100 BF16
+- Each weight is reused across N tokens → high arithmetic intensity
+- **Compute-bound** once the prompt is long enough to fill the GPU
+
+Measured TTFT (PyTorch, BS=1, BF16):
+
+| Prompt tokens | TTFT (ms) |
+|---------------|-----------|
+| 128           | 12.6      |
+| 512           | 17.8      |
+| 2048          | 56.7      |
+| 4096          | 117.6 \*  |
+
+Going from 128 to 512 tokens (4× more) costs only 1.4× more time: a short prompt doesn't
+fill the GPU, so extra tokens ride along almost for free. Past ~2K tokens, TTFT roughly
+doubles when the prompt doubles, which is the compute-bound regime.
+
+\* The N=4096 point comes from the Nsight Systems profiling run (in=4096, out=32), not from a
+`results/` record.
 
 ### Decode (token generation)
-- Generates one token per step, attending over the full KV cache
-- Each step: Q projection for one token [1 × d_model], then attention over [seq_len × d_head]
-- **Compute profile**: tiny GEMMs (~GEMV), 42,672 kernel invocations per 128-token sequence
-- **Bound by**: HBM memory bandwidth (weights loaded for minimal compute)
-- **Measured ITL**: ~11–12ms/token (bs=1 on H100 BF16)
+- Generates one token per step per sequence
+- **Every step streams all ~15.2 GB of BF16 weights from HBM**, plus the KV cache
+- Very little math per byte → **memory-bandwidth-bound**
+- Measured ITL: ~11–12 ms/token (PyTorch, BS=1 through BS=32)
 
-## Roofline Analysis
+## Roofline Numbers (H100 SXM5, dense)
 
-The H100 SXM5 specifications:
-- Peak BF16 tensor TFLOPS: ~3,958 TFLOPS (with sparsity)
-- Peak HBM3 bandwidth: ~3.35 TB/s
-- Arithmetic intensity crossover: ~1,183 FLOP/byte
+| Quantity                       | Value            |
+|--------------------------------|------------------|
+| BF16 Tensor Core peak (dense)  | ~989 TFLOP/s     |
+| HBM3 bandwidth                 | ~3.35 TB/s       |
+| Ridge point (BF16)             | ~295 FLOP/byte   |
 
-**Decode at bs=1** (from nsys kernel geometry analysis):
-- nvjet GEMM tiles are `256×8 output, 64×6 tiles` with `bz` (batch=1) suffix
-- Compute per tile: 256×8×64 = 131,072 FLOPs
-- Bytes loaded (weights): 256×64×2 (BF16) = 32,768 bytes → ~4 FLOP/byte
-- Far below the ~1,183 FLOP/byte crossover → **memory-bandwidth bound**
+(The frequently quoted ~3,958 TFLOP/s is FP8 *with* 2:4 sparsity and doesn't apply to these BF16 runs.)
 
-**Prefill at N=4096**:
-- Large GEMMs with `coopA`/`coopB` cooperative launch: 665µs/kernel
-- These kernels indicate full tile utilization with cooperative thread groups
-- Flash Attention accounts for 9.2% of GPU time (scales with sequence length)
-- **Compute bound** for N > ~512
+**Decode arithmetic intensity.** At batch size B, each 2-byte BF16 weight is read once per
+step and used in B multiply-adds (2B FLOPs):
+
+```
+AI ≈ 2B FLOPs / 2 bytes ≈ B FLOP/byte
+BS=1  → ~1 FLOP/byte
+BS=64 → ~64 FLOP/byte
+```
+
+Both are far below the ~295 FLOP/byte ridge point, so decode stays memory-bound at every
+batch size measured here. (KV-cache and activation traffic only lower the intensity further.)
+
+**Lower bound on ITL.** Streaming 15.2 GB at 3.35 TB/s takes ~4.5 ms. Measured PyTorch ITL is
+~11–12 ms, so about 40% of peak bandwidth is achieved. The rest goes to kernel-launch overhead,
+synchronization, and non-GEMM kernels (see `profiling.md`).
 
 ## Measured Performance on Qwen2.5-7B, H100 80GB HBM3, BF16
 
-### PyTorch (HF Transformers baseline)
+### PyTorch (HF Transformers model, custom decode loop)
 
 | Input | Output | BS | TTFT (ms) | ITL (ms) | Tok/s   |
 |-------|--------|----|-----------|----------|---------|
 | 128   | 256    |  1 |      12.6 |     12.1 |    82.8 |
 | 512   | 256    |  1 |      17.8 |     11.2 |    88.9 |
 | 2048  | 256    |  1 |      56.7 |     12.3 |    80.4 |
-| 4096  | 32     |  1 |     117.6 |     16.6 |    50.1 |
+| 4096  | 32     |  1 |   117.6 \* |  16.6 \* |  50.1 \* |
 | 128   | 256    |  8 |      29.2 |     11.3 |   704.8 |
 | 512   | 256    | 64 |     876.2 |     15.2 | 3,425.9 |
 
-**Key observation**: ITL is nearly flat across input lengths (11–12ms) because decode
-does not read the full KV cache on H100 — HBM bandwidth is sufficient to serve the
-growing cache without meaningful slowdown until very long sequences.
+\* From the Nsight Systems profiling run (profiler overhead included).
+
+**Why ITL is flat across prompt lengths:** each decode step reads all ~15.2 GB of weights but
+only a small KV cache: 56 KB/token, so ~115 MB for a 2,048-token sequence at BS=1. The KV
+reads grow with sequence length, but at these lengths they are under 1% of the bytes read per
+step, so ITL barely moves.
 
 ### Throughput Scaling with Batch Size
 
-Both engines scale linearly in tokens/sec up to batch sizes of 32–64:
+Experiment C, in=512, out=256:
 
 | BS  | PyTorch tok/s | vLLM tok/s | vLLM / PyTorch |
 |-----|--------------|------------|----------------|
@@ -68,35 +91,44 @@ Both engines scale linearly in tokens/sec up to batch sizes of 32–64:
 |  32 |      2,203.8 |    4,878.8 |          2.21× |
 |  64 |      3,425.9 |    8,185.9 |          2.39× |
 
-vLLM maintains a ~2× throughput advantage across all batch sizes primarily due to
-continuous batching and reduced Python overhead in the generation loop.
+vLLM is ~2× faster **even at BS=1**, where batching plays no role. So the gap comes from lower
+per-step overhead (vLLM captures decode steps as CUDA graphs and uses optimized kernels), not
+from continuous batching or paging.
 
-## GPU Kernel Time Breakdown (from Nsight Systems)
+These runs submit all requests at once with identical lengths, so continuous batching's main
+advantage (admitting requests that arrive at different times) is not exercised here.
 
-Profiled on pytorch engine, H100 80GB HBM3, BF16, 1 request.
+## GPU Kernel Time Breakdown (Nsight Systems)
 
-### Decode-heavy: in=512, out=128, bs=1
+Profiled on the pytorch engine, H100 80GB HBM3, BF16, BS=1.
+
+### Decode-heavy: in=512, out=128
 - Total GPU kernel time: 6,137 ms
 - nvjet GEMM kernels: 4,179 ms (**68.1%**)
+- Elementwise kernels: 260 ms (4.2%)
 - Flash Attention: 254 ms (4.1%)
-- Elementwise (activations): ~600 ms (9.8%)
 
-### Prefill-heavy: in=4096, out=32, bs=1
+### Prefill-heavy: in=4096, out=32
 - Total GPU kernel time: 1,727 ms
 - nvjet GEMM kernels: 940 ms (**54.4%**)
-- Flash Attention: 159 ms (9.2%) ← 2.3× share vs decode-heavy
+- Elementwise kernels: 13.7%
+- Flash Attention: 159 ms (9.2%)
 
-Flash Attention's fraction of GPU time grows with sequence length (O(n²) attention
-cost) but remains secondary to linear layer GEMMs at these sequence lengths.
+Attention's share grows with sequence length, but linear-layer GEMMs (the weight reads)
+dominate at these lengths.
 
 ## Python Dispatch Overhead
 
-From Nsight Systems CUDA API trace (decode-heavy profile):
-- 855,648 `cudaLaunchKernel` calls × 5µs avg = **4.3 seconds** of pure Python→CUDA overhead
-- This represents ~38% of wall time in the HF PyTorch engine
-- 780 `cudaDeviceSynchronize` calls × 318µs = **248ms** of mandatory GPU idle time
+From the Nsight Systems CUDA API trace (decode-heavy profile):
+- 855,648 `cudaLaunchKernel` calls × ~5 µs = **~4.3 s** of launch overhead in an ~11 s run
+- 780 `cudaDeviceSynchronize` calls × 318 µs = **~248 ms** of GPU idle time
+- GPU kernel time is only ~6.1 s of that ~11 s run
 
-Production runtimes (vLLM, TRT-LLM) reduce this overhead via:
-- Continuous batching (fewer Python-level steps per token)
-- CUDA graphs (capture entire decode step, replay without Python overhead)
-- C++ execution engines
+Note: the PyTorch engine calls `torch.cuda.synchronize()` after every decode step so it can
+timestamp each token. That stops the CPU from queueing work ahead of the GPU, so part of this
+idle time is caused by measurement itself.
+
+Production runtimes reduce launch overhead with CUDA graphs captured over a **pre-allocated,
+fixed-shape KV cache**, plus C++ schedulers. Simply wrapping this engine in
+`torch.compile(backend="cudagraphs")` did not work; see Experiment F in
+`reports/full_report.txt`.

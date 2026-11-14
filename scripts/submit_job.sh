@@ -17,7 +17,7 @@ ENGINE="pytorch"
 GPUS=1
 DRY_RUN=false
 PARTITION="dgxh100"
-MAIL_USER="boyea@ad.msoe.edu"
+MAIL_USER="${MAIL_USER:-your_username@your_institution.edu}"
 CONTAINER=""
 BENCH_ARGS=()
 

@@ -2,78 +2,75 @@
 
 ## Overview
 
-Quantization reduces model weight precision to decrease memory bandwidth pressure
-and potentially increase throughput. For memory-bandwidth-bound decode workloads,
-narrower dtype → smaller weights → faster HBM streaming → faster inference.
+Lower-precision weights mean fewer bytes to stream per decode step. Because decode is
+memory-bound, that *can* speed up inference, but only if the hardware actually computes with
+the smaller format instead of converting back first.
 
 Formats evaluated in Experiment E:
 
-| dtype | Bits/param | Model size (7B) | H100 support      |
-|-------|-----------|-----------------|-------------------|
-| bf16  | 16        | ~15.2 GB        | Native BF16 Tensor Cores |
-| fp16  | 16        | ~15.2 GB        | Native FP16 Tensor Cores |
-| int8  | 8         | ~7.6 GB         | INT8 Tensor Cores (via bitsandbytes) |
+| dtype | Bits/param | Weight size (7.6B params) | How it runs here                              |
+|-------|-----------|---------------------------|-----------------------------------------------|
+| bf16  | 16        | ~15.2 GB                  | Native BF16 Tensor Cores                      |
+| fp16  | 16        | ~15.2 GB                  | Native FP16 Tensor Cores                      |
+| int8  | 8         | ~7.6 GB (theoretical)     | bitsandbytes `LLM.int8()` (mixed precision)   |
 
 ## Measured Results (Experiment E)
 
-**Setup**: Qwen2.5-7B, H100 80GB HBM3, in=512, out=256, bs=4, 50 requests.
+**Setup**: Qwen2.5-7B, H100 80GB HBM3, in=512, out=256, BS=4.
 
 ### PyTorch Engine
 
-| dtype | TTFT (ms) | ITL (ms) | Tok/s   | GPU Mem (GB) |
-|-------|-----------|----------|---------|-------------|
-| bf16  |      55.9 |     11.1 |   357.3 |        15.0 |
-| fp16  |      56.8 |     11.4 |   317.3 |        15.0 |
-| int8  |      55.7 |     11.0 |   351.1 |         8.3 |
-
-**Findings**:
-- **BF16 vs FP16**: minimal throughput difference (12% advantage for BF16). H100 handles
-  both natively via Tensor Cores. BF16 has wider exponent range, better for LLM weights.
-- **INT8**: similar throughput to BF16 (~1.7% slower) with nearly half the memory (8.3 GB
-  vs 15.0 GB). The expected speedup from halved bandwidth doesn't appear because
-  `bitsandbytes` LLM.int8() uses mixed-precision: matrix multiplications are dequantized
-  to fp16/bf16 at runtime, negating the bandwidth benefit.
-- **Memory saving**: INT8 saves ~6.7 GB (45% reduction), enabling larger batch sizes.
+| dtype | TTFT (ms) | ITL (ms) | Tok/s |
+|-------|-----------|----------|-------|
+| bf16  |      55.9 |     11.0 | 357.3 |
+| fp16  |      56.8 |     12.4 | 317.3 |
+| int8  |      55.7 |     11.2 | 351.1 |
 
 ### vLLM Engine
 
-| dtype | TTFT (ms) | Tok/s   | GPU Mem (GB) |
-|-------|-----------|---------|-------------|
-| bf16  |     1,545 |   662.6 |        30.1 |
-| fp16  |     1,585 |   646.1 |        30.1 |
+| dtype | Tok/s |
+|-------|-------|
+| bf16  | 662.6 |
+| fp16  | 646.1 |
 
-vLLM pre-allocates KV cache on startup (default: 85% of GPU memory). The 30 GB
-memory figure includes both model weights (15 GB) and pre-allocated KV cache (~15 GB).
+**Findings**:
+- **INT8 gives no speedup** (351 vs 357 tok/s). bitsandbytes `LLM.int8()` is designed to save
+  memory, not time: it splits each matrix multiply into an INT8 part and a 16-bit part for
+  outlier features, with quantize/dequantize work around them. The smaller weights don't turn
+  into faster decode.
+- **FP16 vs BF16**: the H100 runs both at the same Tensor Core rate. FP16 measured 11% slower
+  in PyTorch but only 2.5% slower in vLLM. The PyTorch BF16 and FP16 runs landed on
+  different nodes, so treat that gap as run-to-run variation until it's rerun on one node.
+- **Memory**: INT8's expected benefit is roughly halving weight memory (~15.2 → ~7.6 GB of
+  weights). It was **not measured reliably** here: the GPU-memory poller reads every GPU on the
+  node (see `kv-cache.md`). vLLM always reads ~72.7 GB because it pre-allocates 90% of GPU memory.
 
-## Why INT8 Doesn't Help Much Here
+## Accuracy (FP16 vs BF16)
 
-The bitsandbytes `LLM.int8()` quantization used in this experiment is a **post-training
-quantization (PTQ)** scheme designed for memory reduction, not speed:
+`evaluation/accuracy_eval.py`, 20 fixed prompts, 128 tokens, greedy decoding, BF16 as reference:
 
-1. Weights stored as INT8
-2. At inference, weight tensors are dequantized to FP16/BF16 for matrix multiply
-3. Matrix multiplication runs in BF16 — same bandwidth as native BF16
+| dtype | ROUGE-L | Token overlap | Length ratio |
+|-------|---------|---------------|--------------|
+| fp16  | 0.850   | 0.873         | 0.995        |
 
-For genuine INT8 speedup, use **static quantization** with integer arithmetic:
-- TensorRT-LLM INT8 with calibration data (SmoothQuant or GPTQ)
-- Requires a calibration step and accuracy evaluation
-- Can achieve 1.5–2× throughput improvement at equivalent memory savings
+Greedy decoding amplifies tiny numeric differences: once one token differs, the rest of the
+text can take a different path. The outputs stay on topic and similar in length. INT8 accuracy
+was not evaluated.
 
-## Weight-Only Quantization (INT4)
+## Getting Real Speedups from Low Precision
 
-Not evaluated in this project (no GPTQ/AWQ models available on Rosie).
-Expected behavior for 4-bit quantization:
-- Memory: ~3.8 GB for 7B model → 4× reduction from BF16
-- Throughput: 1.5–2× improvement on memory-bound decode workloads
-- Accuracy: 0.1–0.5 point MMLU degradation (model-dependent)
+Speedups need kernels that compute end-to-end in the low-precision format:
+- TensorRT-LLM INT8 SmoothQuant, or weight-only INT8/INT4 (AWQ, GPTQ) with fused kernels
+- FP8 on H100 (native FP8 Tensor Cores)
+- All require a calibration step and an accuracy check
+
+These were not evaluated in this project.
 
 ## Precision Recommendation
 
 For Qwen2.5-7B on H100 80GB:
-- **BF16**: best default choice — fast, accurate, stable training if fine-tuning
-- **FP16**: functionally equivalent, slightly lower throughput
-- **INT8 (bitsandbytes)**: use only if 7.6 GB memory saving is needed to fit more
-  concurrent requests; don't expect throughput improvement
-- **INT8 (TRT-LLM static)**: worth evaluating if 1.5× throughput matters; requires
-  calibration dataset and accuracy validation
-- **INT4 (GPTQ/AWQ)**: best memory-to-performance ratio for latency-constrained deployments
+- **BF16**: default choice; fast and numerically robust
+- **FP16**: same hardware speed; use if a toolchain requires it
+- **INT8 (bitsandbytes)**: only to fit a model in less memory; don't expect a speedup
+- **FP8 / INT8 / INT4 with dedicated kernels**: the path to actual speedups; needs calibration
+  and accuracy validation

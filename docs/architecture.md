@@ -14,17 +14,17 @@ InferX/
 │   └── default.yaml           # Default sweep parameters
 ├── engines/
 │   ├── base.py                # InferenceEngine ABC, GenerationResult, MemoryStats
-│   ├── pytorch/               # HuggingFace Transformers baseline engine
+│   ├── pytorch/               # HuggingFace Transformers model + custom token-by-token decode loop
+│   ├── pytorch_compiled/      # Same, wrapped in torch.compile(backend="cudagraphs") (Experiment F)
 │   ├── vllm/                  # vLLM PagedAttention engine
 │   └── tensorrt_llm/          # TensorRT-LLM 0.21.0 engine + build scripts
 ├── profiling/
-│   ├── nsight-systems/        # nsys SLURM script + .nsys-rep profiles
+│   ├── nsight-systems/        # nsys SLURM script (profiles are not committed)
 │   └── nsight-compute/        # ncu SLURM script (ERR_NVGPUCTRPERM on Rosie)
 ├── results/                   # JSONL benchmark outputs, SLURM logs, TRT engines
 ├── scripts/
 │   └── submit_job.sh          # Generic SLURM wrapper for all engines
-├── workloads/                 # Prompt datasets (synthetic + LMSYS)
-├── evaluation/                # Accuracy eval scripts (perplexity, MMLU)
+├── evaluation/                # Accuracy eval (BF16 vs FP16 output similarity: ROUGE-L, token overlap)
 ├── reports/
 │   └── full_report.txt        # Consolidated findings from all experiments
 └── docs/                      # This directory
@@ -50,7 +50,7 @@ Each engine implements `InferenceEngine` from `engines/base.py`:
 | Engine        | Container                        | Key Feature                          |
 |---------------|----------------------------------|--------------------------------------|
 | pytorch       | msoe-pytorch-25.05-py3.sif       | HF Transformers, autoregressive loop |
-| vllm          | msoe-vllm.sif                    | PagedAttention, continuous batching  |
+| vllm          | msoe-vllm.sif                    | PagedAttention, continuous batching, CUDA graphs |
 | tensorrt_llm  | msoe-pytorch-25.05-py3.sif       | Fused TRT kernels, paged KV cache    |
 
 TensorRT-LLM uses the pytorch container because no dedicated TRT-LLM Singularity image

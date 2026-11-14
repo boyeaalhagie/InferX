@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name="inferx"
-#SBATCH --output=/home/ad.msoe.edu/boyea/InferX/results/slurm_%j_trtllm_build.out
+#SBATCH --output=results/slurm_%j_trtllm_build.out
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=boyea@ad.msoe.edu
+#SBATCH --mail-user=your_username@your_institution.edu
 #SBATCH --partition=dgxh100
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:h100:1
@@ -20,7 +20,7 @@
 
 set -euo pipefail
 
-REPO_ROOT="/home/ad.msoe.edu/boyea/InferX"
+REPO_ROOT="${REPO_ROOT:-$HOME/InferX}"
 CONTAINER="/data/containers/msoe-pytorch-25.05-py3.sif"
 MODEL_PATH="${MODEL_PATH:-${REPO_ROOT}/models/qwen2.5-7b}"
 DTYPE="${DTYPE:-bf16}"

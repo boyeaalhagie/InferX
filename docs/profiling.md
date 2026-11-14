@@ -6,7 +6,7 @@
 |------|----------|--------|-------|
 | Nsight Systems (nsys) | `/usr/local/cuda/bin/nsys` inside `msoe-pytorch-25.05-py3.sif` | ✅ Working | Full kernel timeline, CUDA API trace |
 | Nsight Compute (ncu) | `/usr/local/bin/ncu` inside `msoe-pytorch-25.05-py3.sif` | ❌ ERR_NVGPUCTRPERM | HW counters locked to root |
-| nvidia-smi | Host + container | ✅ Working | GPU utilization, memory |
+| nvidia-smi | Host + container | ⚠️ Works, but see note | Queries every GPU on the node unless `-i` is given |
 | torch.profiler | Python in-process | ✅ Working | No root required |
 
 **ERR_NVGPUCTRPERM**: Rosie restricts NVIDIA hardware performance counter access to
@@ -100,13 +100,15 @@ Flash Attention:     159ms  ( 9.2%)  ← higher share (longer sequence)
 ### Key Findings
 
 1. **GEMM dominates decode** (68% at bs=1). Decode is memory-bandwidth bound:
-   tiny `bz` (batch=1) tiles cannot saturate H100 tensor cores.
+   at bs=1 each weight is read once per step for ~1 FLOP/byte, far below the H100 BF16 ridge (~295 FLOP/byte).
 
 2. **FlashAttention grows with sequence length**: 4.1% at in=512 vs 9.2% at in=4096.
    Not the bottleneck at current sequence lengths but would dominate at >16K tokens.
 
 3. **Python dispatch overhead**: 855,648 `cudaLaunchKernel` calls × 5µs = 4.3 seconds
-   pure overhead in a ~11-second decode run (~38% of wall time).
+   of launch overhead in a ~11-second decode run, while GPU kernels ran for only ~6.1 s. The engine also
+   calls `torch.cuda.synchronize()` after every token to timestamp it, which keeps the CPU from
+   queueing work ahead, so part of this gap is measurement-induced.
 
 4. **Synchronization gaps**: 780 `cudaDeviceSynchronize` × 318µs = 248ms idle time.
    Production runtimes pipeline decode steps to eliminate this.

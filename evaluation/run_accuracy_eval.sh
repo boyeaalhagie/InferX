@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name="inferx"
-#SBATCH --output=/home/ad.msoe.edu/boyea/InferX/evaluation/accuracy_eval_%j.out
+#SBATCH --output=evaluation/accuracy_eval_%j.out
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=boyea@ad.msoe.edu
+#SBATCH --mail-user=your_username@your_institution.edu
 #SBATCH --partition=dgxh100
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:h100:1
@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-REPO_ROOT="/home/ad.msoe.edu/boyea/InferX"
+REPO_ROOT="${REPO_ROOT:-$HOME/InferX}"
 CONTAINER="/data/containers/msoe-pytorch-25.05-py3.sif"
 
 module load h100Env 2>/dev/null && echo "h100Env loaded" || echo "h100Env not available"

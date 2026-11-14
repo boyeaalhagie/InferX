@@ -1,5 +1,5 @@
 {
-  "model": "/home/ad.msoe.edu/boyea/InferX/models/qwen2.5-7b",
+  "model": "models/qwen2.5-7b",
   "timestamp": "2026-11-09T19:08:36",
   "n_prompts": 20,
   "max_new_tokens": 128,

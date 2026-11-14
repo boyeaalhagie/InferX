@@ -1655,7 +1655,7 @@ Qwen2.5-7B, BF16, 1× H100 80GB, input=512 tokens
 
 Config              Engine          TTFT ms   Tok/s   Mem GB  Util%
 ------------------------------------------------------------------------
-BS=1 out=128        pytorch            17.8    88.9    67.35   17.1
+BS=1 out=128        pytorch            17.9    81.2    15.18   77.0
 BS=1 out=128        vllm              761.3   168.1    72.72   99.1
 BS=1 out=128        tensorrt_llm      268.4   142.9    16.09   93.4
 
@@ -1663,7 +1663,7 @@ BS=1 out=256        pytorch            17.7    81.1    15.19   75.4
 BS=1 out=256        vllm             1530.3   167.3    72.72   19.9
 BS=1 out=256        tensorrt_llm      527.3   145.5    16.09   94.1
 
-BS=4 out=128        pytorch            55.9   357.8    67.35   17.8
+BS=4 out=128        pytorch            55.7   346.9    67.35   17.7
 BS=4 out=128        vllm              800.4   639.7    72.72   19.8
 BS=4 out=128        tensorrt_llm      277.1   552.3    16.21   94.2
 
@@ -1672,9 +1672,9 @@ BS=4 out=256        vllm             1545.3   662.6    72.72   20.0
 BS=4 out=256        tensorrt_llm      542.1   565.6    16.24   94.6
 
 Key findings:
-- TRT-LLM throughput: 1.5–1.6× faster than pytorch (BS=4); 1.6–1.8× faster at BS=1
+- TRT-LLM throughput: ~1.6× faster than pytorch at BS=4; ~1.8× faster at BS=1
 - vLLM throughput: highest of the three at both BS=1 and BS=4 (e.g. 639.7 vs
-  552.3 vs 357.8 tok/s at BS=4, out=128)
+  552.3 vs 346.9 tok/s at BS=4, out=128)
 - Mem GB / Util% columns are NOT comparable (see READ FIRST at the top): the
   poller reads every GPU on the node, and vLLM pre-allocates 90% of memory.
 - TTFT columns: only pytorch TTFT is measured. vLLM TTFT is total batch latency
